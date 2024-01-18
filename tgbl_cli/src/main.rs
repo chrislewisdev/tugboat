@@ -25,6 +25,9 @@ fn main() {
     let file = fs::read_to_string(&args.file);
     match file {
         Err(err) => println!("Unable to open {:?}: {}", args.file, err),
-        Ok(_contents) => println!("Compiling {:?}", args.file),
+        Ok(contents) => {
+            println!("Compiling {:?}", args.file);
+            tgbl::compile(args.file.file_stem().unwrap().to_str().unwrap(), contents);
+        }
     }
 }
