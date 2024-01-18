@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "tgbl",
+    "tgbl_cli"
+]
+resolver = "2"
