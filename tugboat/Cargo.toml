@@ -1,10 +1,8 @@
 [package]
-name = "tgbl_cli"
+name = "tugboat"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tgbl = { path = "../tgbl" }
-clap = { version = "4.4.18", features = ["derive"] }

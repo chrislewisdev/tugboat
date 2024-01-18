@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "tgbl",
-    "tgbl_cli"
+    "tugboat",
+    "tugboat_cli"
 ]
 resolver = "2"

@@ -27,7 +27,7 @@ fn main() {
         Err(err) => println!("Unable to open {:?}: {}", args.file, err),
         Ok(contents) => {
             println!("Compiling {:?}", args.file);
-            tgbl::compile(args.file.file_stem().unwrap().to_str().unwrap(), contents);
+            tugboat::compile(args.file.file_stem().unwrap().to_str().unwrap(), contents);
         }
     }
 }
