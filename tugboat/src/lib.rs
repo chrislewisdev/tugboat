@@ -1,23 +1,13 @@
-use std::{collections::VecDeque, fs};
+mod lexer;
 
-enum Token {
-    Fn,
-    LeftBrace,
-    RightBrace,
-    LeftParen,
-    RightParen,
-    Equals,
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Semicolon,
-}
+use std::{collections::VecDeque, fs};
+use lexer::Token;
+
 enum Stmt {}
 enum _Expr {}
 
 pub fn compile(name: &str, contents: String) {
-    let tokens = lex(contents);
+    let tokens = lexer::lex(contents);
     let ast = parse(tokens);
     // *Probably* going to need some more steps here.
     let asm = codegen(ast);
@@ -29,22 +19,7 @@ pub fn compile(name: &str, contents: String) {
     }
 }
 
-fn lex(code: String) -> VecDeque<Token> {
-    let mut queue: VecDeque<_> = code.chars().collect();
-    let mut tokens: VecDeque<Token> = VecDeque::new();
-
-    while queue.len() > 0 {
-        let c = queue.pop_front();
-        match c {
-            Some('{') => tokens.push_back(Token::LeftBrace),
-            _ => {},
-        }
-    }
-    
-    VecDeque::new()
-}
-
-fn parse(_tokens: VecDeque<Token>) -> Vec<Stmt> {
+fn parse(_tokens: Vec<Token>) -> Vec<Stmt> {
     Vec::new()
 }
 
