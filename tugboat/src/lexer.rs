@@ -53,45 +53,29 @@ pub fn lex(code: String) -> Vec<Token> {
     };
 
     while queue.len() > 0 {
-        let next_char = queue.pop_front();
-        match next_char {
+        match queue.pop_front() {
             Some(c) if SINGLE_CHAR_TOKENS.contains_key(&c) => {
-                add(
-                    SINGLE_CHAR_TOKENS.get(&c).unwrap().clone(),
-                    String::from(c),
-                    None,
-                    line,
-                );
+                let kind = SINGLE_CHAR_TOKENS.get(&c).unwrap().clone();
+                add(kind, String::from(c), None, line);
             }
             Some(c @ '0'..='9') => {
                 let mut literal = String::from(c);
-                while match queue.get(0) {
-                    Some(nc) if is_digit(nc) => true,
-                    _ => false,
-                } {
+                while is_digit(queue.get(0)) {
                     literal.push(queue.pop_front().unwrap());
                 }
 
                 let value: u8 = literal.parse().unwrap();
                 add(Literal, literal, Some(value), line);
-            },
+            }
             Some(c @ 'a'..='z' | c @ 'A'..='Z') => {
-                // Build up the rest of our identifier
                 let mut identifier = String::from(c);
-                while match queue.get(0) {
-                    Some(nc) if is_identifier(nc) => true,
-                    _ => false,
-                } {
+                while is_identifier(queue.get(0)) {
                     identifier.push(queue.pop_front().unwrap());
                 }
 
                 if KEYWORDS.contains_key(&identifier) {
-                    add(
-                        KEYWORDS.get(&identifier).unwrap().clone(),
-                        identifier,
-                        None,
-                        line,
-                    );
+                    let kind = KEYWORDS.get(&identifier).unwrap().clone();
+                    add(kind, identifier, None, line);
                 } else {
                     add(Identifier, identifier, None, line);
                 }
@@ -106,19 +90,19 @@ pub fn lex(code: String) -> Vec<Token> {
     tokens
 }
 
-fn is_digit(c: &char) -> bool {
+fn is_digit(c: Option<&char>) -> bool {
     match c {
-        '0'..='9' => true,
+        Some('0'..='9') => true,
         _ => false,
     }
 }
 
-fn is_identifier(c: &char) -> bool {
+fn is_identifier(c: Option<&char>) -> bool {
     match c {
-        'A'..='Z' => true,
-        'a'..='z' => true,
-        '0'..='9' => true,
-        '_' => true,
+        Some('A'..='Z') => true,
+        Some('a'..='z') => true,
+        Some('0'..='9') => true,
+        Some('_') => true,
         _ => false,
     }
 }
@@ -169,13 +153,18 @@ mod tests {
         let result = lex(String::from("myVar something"));
         assert_eq!(
             result,
-            vec![token(Identifier, "myVar", None, 1), token(Identifier, "something", None, 1)]
+            vec![
+                token(Identifier, "myVar", None, 1),
+                token(Identifier, "something", None, 1)
+            ]
         );
     }
 
     #[test]
     fn lex_basic_script() {
-        let result = lex(String::from("u8 variable;\nfn main() {\nvariable = 5;\n}\n"));
+        let result = lex(String::from(
+            "u8 variable;\nfn main() {\nvariable = 5;\n}\n",
+        ));
         assert_eq!(
             result,
             vec![
@@ -194,5 +183,11 @@ mod tests {
                 token(RightBrace, "}", None, 4)
             ]
         );
+    }
+
+    #[test]
+    fn lex_big_number() {
+        let _ = lex(String::from("65536"));
+        // TODO: How do we report errors?
     }
 }
