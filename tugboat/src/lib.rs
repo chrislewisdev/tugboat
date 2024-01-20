@@ -1,7 +1,7 @@
 mod lexer;
 
-use std::{collections::VecDeque, fs};
 use lexer::Token;
+use std::{collections::VecDeque, fs};
 
 enum Stmt {}
 enum _Expr {}
