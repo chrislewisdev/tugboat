@@ -3,8 +3,25 @@ mod lexer;
 use lexer::Token;
 use std::collections::VecDeque;
 
-enum Stmt {}
-enum _Expr {}
+pub enum Stmt {
+    Function {
+        name: Token,
+        arguments: Vec<Token>,
+        body: Vec<Stmt>,
+    },
+    Variable {
+        name: Token,
+    },
+    Halt,
+    While {
+        condition: Expr,
+        body: Vec<Stmt>,
+    },
+    Assign,
+}
+pub enum Expr {
+    Literal,
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CompilationError {

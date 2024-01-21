@@ -1,0 +1,36 @@
+program         -> declaration* EOF;
+
+declaration     -> funDecl | varDecl | statement;
+
+funDecl         -> "fn" function;
+function        -> IDENTIFIER "(" parameters? ")" block;
+parameters      -> IDENTIFIER ( "," IDENTIFIER )*;
+varDecl         -> "u8" IDENTIFIER ("=" expression)? ";";
+
+statement       ->  haltStmt | exprStmt | forStmt | ifStmt | returnStmt | whileStmt | block;
+haltStmt        ->  "halt" ";" ;
+exprStmt        ->  expression ";" ;
+forStmt         ->  "for" "(" (varDecl | exprStmt | ";")
+                    expression? ";"
+                    expression? ")" statement;
+ifStmt          ->  "if" "(" expression ")" statement ("else" statement)?;
+returnStmt      ->  "return" expression? ";" ;
+whileStmt       ->  "while" "(" expression ")" statement;
+block           ->  "{" declaration* "}";
+
+expression      ->  assignment;
+assignment      ->  IDENTIFIER "=" assignment
+                    | logic_or;
+logic_orq       ->  logic_and ( "or" logic_and )*;
+logic_and       ->  equality ( "and" equality )*;
+equality        ->  comparison ( ( "!=" | "==" ) comparison )* ;
+comparison      ->  term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
+term            ->  factor ( ( "-" | "+" ) factor )* ;
+factor          ->  unary ( ( "/" | "*" ) unary )* ;
+unary           ->  ( "!" | "-" ) unary
+                    | call ;
+call            ->  primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
+primary         ->  NUMBER | STRING | "true" | "false"
+                    | "(" expression ")" | IDENTIFIER ;
+
+arguments       ->  expression ("," expression)* ;

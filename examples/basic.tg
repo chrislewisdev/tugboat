@@ -3,3 +3,4 @@ u8 variable;
 fn main() {
     variable = 5;
 }
+

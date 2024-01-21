@@ -14,9 +14,13 @@ pub enum TokenKind {
     //Keywords
     Fn,
     Unsigned8,
+    While,
+    True,
+    False,
+    Halt,
     // Multi-character
     Identifier,
-    Literal,
+    Number,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -41,6 +45,10 @@ static SINGLE_CHAR_TOKENS: phf::Map<char, TokenKind> = phf_map! {
 static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "fn" => Fn,
     "u8" => Unsigned8,
+    "true" => True,
+    "false" => False,
+    "while" => While,
+    "halt" => Halt,
 };
 
 pub fn lex(code: String) -> (Vec<Token>, Vec<CompilationError>) {
@@ -71,7 +79,7 @@ pub fn lex(code: String) -> (Vec<Token>, Vec<CompilationError>) {
                 let parse_result = literal.parse::<u8>();
                 match parse_result {
                     Ok(value) => {
-                        add(Literal, literal, Some(value), line);
+                        add(Number, literal, Some(value), line);
                     }
                     Err(err) => {
                         let msg = format!("Failed to parse literal: {}", err.to_string());
@@ -201,7 +209,7 @@ mod tests {
                 token(LeftBrace, "{", None, 2),
                 token(Identifier, "variable", None, 3),
                 token(Equals, "=", None, 3),
-                token(Literal, "5", Some(5), 3),
+                token(Number, "5", Some(5), 3),
                 token(Semicolon, ";", None, 3),
                 token(RightBrace, "}", None, 4)
             ]
