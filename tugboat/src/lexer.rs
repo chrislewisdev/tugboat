@@ -25,10 +25,10 @@ pub enum TokenKind {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Token {
-    kind: TokenKind,
-    lexeme: String,
-    value: Option<u8>,
-    line: u32,
+    pub kind: TokenKind,
+    pub lexeme: String,
+    pub value: Option<u8>,
+    pub line: u32,
 }
 
 use TokenKind::*;

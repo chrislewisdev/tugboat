@@ -1,4 +1,5 @@
 mod lexer;
+mod parser;
 
 use lexer::Token;
 use std::collections::VecDeque;
@@ -18,6 +19,7 @@ pub enum Stmt {
         body: Vec<Stmt>,
     },
     Assign,
+    Expression,
 }
 pub enum Expr {
     Literal,
@@ -32,7 +34,7 @@ pub struct CompilationError {
 pub fn compile(_name: &str, contents: String) -> Vec<CompilationError> {
     let mut errors: Vec<CompilationError> = Vec::new();
     let (tokens, lexer_errors) = lexer::lex(contents);
-    let (ast, parser_errors) = parse(tokens);
+    let (ast, parser_errors) = parser::parse(tokens);
 
     errors.extend(lexer_errors);
     errors.extend(parser_errors);
@@ -50,10 +52,6 @@ pub fn compile(_name: &str, contents: String) -> Vec<CompilationError> {
     //}
 
     errors
-}
-
-fn parse(_tokens: Vec<Token>) -> (Vec<Stmt>, Vec<CompilationError>) {
-    (Vec::new(), Vec::new())
 }
 
 fn codegen(_ast: Vec<Stmt>) -> String {
