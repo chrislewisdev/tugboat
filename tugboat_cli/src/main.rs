@@ -1,6 +1,7 @@
 use clap::{Parser, ValueEnum};
 use std::fs;
 use std::path::PathBuf;
+use tugboat::CompilationError;
 
 #[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
 enum Format {
@@ -27,7 +28,18 @@ fn main() {
         Err(err) => println!("Unable to open {:?}: {}", args.file, err),
         Ok(contents) => {
             println!("Compiling {:?}", args.file);
-            tugboat::compile(args.file.file_stem().unwrap().to_str().unwrap(), contents);
+            compile(args.file.file_stem().unwrap().to_str().unwrap(), contents);
         }
+    }
+}
+
+fn compile(filename: &str, contents: String) {
+    let errors = tugboat::compile(filename, contents);
+    report(errors);
+}
+
+fn report(errors: Vec<CompilationError>) {
+    for err in errors {
+        println!("[line {}] error: {}", err.line, err.msg);
     }
 }

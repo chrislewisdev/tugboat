@@ -43,13 +43,17 @@ static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
     "u8" => Unsigned8,
 };
 
-pub fn lex(code: String) -> Vec<Token> {
+pub fn lex(code: String) -> (Vec<Token>, Vec<CompilationError>) {
     let mut queue: VecDeque<_> = code.chars().collect();
     let mut tokens: Vec<Token> = Vec::new();
+    let mut errors: Vec<CompilationError> = Vec::new();
     let mut line = 1;
 
     let mut add = |kind: TokenKind, lexeme: String, value: Option<u8>, line: u32| {
         tokens.push(build_token(kind, lexeme, value, line))
+    };
+    let mut error = |msg: String, line: u32| {
+        errors.push(CompilationError { msg, line });
     };
 
     while queue.len() > 0 {
@@ -64,8 +68,16 @@ pub fn lex(code: String) -> Vec<Token> {
                     literal.push(queue.pop_front().unwrap());
                 }
 
-                let value: u8 = literal.parse().unwrap();
-                add(Literal, literal, Some(value), line);
+                let parse_result = literal.parse::<u8>();
+                match parse_result {
+                    Ok(value) => {
+                        add(Literal, literal, Some(value), line);
+                    }
+                    Err(err) => {
+                        let msg = format!("Failed to parse literal: {}", err.to_string());
+                        error(msg, line);
+                    }
+                }
             }
             Some(c @ 'a'..='z' | c @ 'A'..='Z') => {
                 let mut identifier = String::from(c);
@@ -83,11 +95,15 @@ pub fn lex(code: String) -> Vec<Token> {
             Some('\n') => {
                 line += 1;
             }
-            _ => {}
+            Some(' ' | '\t' | '\r') => {}
+            Some(c) => {
+                error(format!("Unexpected character: {}", c), line);
+            }
+            None => {}
         }
     }
 
-    tokens
+    (tokens, errors)
 }
 
 fn is_digit(c: Option<&char>) -> bool {
@@ -124,9 +140,16 @@ mod tests {
         build_token(kind, lexeme.to_string(), value, line)
     }
 
+    fn error(msg: &str, line: u32) -> CompilationError {
+        CompilationError {
+            msg: msg.to_string(),
+            line,
+        }
+    }
+
     #[test]
     fn lex_single_char() {
-        let result = lex(String::from("{}();"));
+        let (result, _) = lex(String::from("{}();"));
         assert_eq!(
             result,
             vec![
@@ -141,7 +164,7 @@ mod tests {
 
     #[test]
     fn lex_keywords() {
-        let result = lex(String::from("fn u8"));
+        let (result, _) = lex(String::from("fn u8"));
         assert_eq!(
             result,
             vec![token(Fn, "fn", None, 1), token(Unsigned8, "u8", None, 1),]
@@ -150,7 +173,7 @@ mod tests {
 
     #[test]
     fn lex_identifiers() {
-        let result = lex(String::from("myVar something"));
+        let (result, _) = lex(String::from("myVar something"));
         assert_eq!(
             result,
             vec![
@@ -162,7 +185,7 @@ mod tests {
 
     #[test]
     fn lex_basic_script() {
-        let result = lex(String::from(
+        let (result, _) = lex(String::from(
             "u8 variable;\nfn main() {\nvariable = 5;\n}\n",
         ));
         assert_eq!(
@@ -187,7 +210,13 @@ mod tests {
 
     #[test]
     fn lex_big_number() {
-        let _ = lex(String::from("65536"));
-        // TODO: How do we report errors?
+        let (_, errors) = lex(String::from("65536"));
+        assert_eq!(
+            errors,
+            vec![error(
+                "Failed to parse literal: number too large to fit in target type",
+                1
+            )]
+        );
     }
 }

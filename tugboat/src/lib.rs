@@ -1,26 +1,42 @@
 mod lexer;
 
 use lexer::Token;
-use std::{collections::VecDeque, fs};
+use std::collections::VecDeque;
 
 enum Stmt {}
 enum _Expr {}
 
-pub fn compile(name: &str, contents: String) {
-    let tokens = lexer::lex(contents);
-    let ast = parse(tokens);
-    // *Probably* going to need some more steps here.
-    let asm = codegen(ast);
-
-    let result = fs::write(format!("{}.asm", name), asm);
-    match result {
-        Err(err) => println!("Failed to write assembly: {}", err),
-        _ => {}
-    }
+#[derive(Debug, PartialEq, Eq)]
+pub struct CompilationError {
+    pub msg: String,
+    pub line: u32,
 }
 
-fn parse(_tokens: Vec<Token>) -> Vec<Stmt> {
-    Vec::new()
+pub fn compile(_name: &str, contents: String) -> Vec<CompilationError> {
+    let mut errors: Vec<CompilationError> = Vec::new();
+    let (tokens, lexer_errors) = lexer::lex(contents);
+    let (ast, parser_errors) = parse(tokens);
+
+    errors.extend(lexer_errors);
+    errors.extend(parser_errors);
+    if errors.len() > 0 {
+        return errors;
+    }
+
+    // *Probably* going to need some more steps here.
+    let _asm = codegen(ast);
+
+    //let result = fs::write(format!("{}.asm", name), asm);
+    //match result {
+    //    Err(err) => println!("Failed to write assembly: {}", err),
+    //    _ => {}
+    //}
+
+    errors
+}
+
+fn parse(_tokens: Vec<Token>) -> (Vec<Stmt>, Vec<CompilationError>) {
+    (Vec::new(), Vec::new())
 }
 
 fn codegen(_ast: Vec<Stmt>) -> String {
