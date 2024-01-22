@@ -9,6 +9,7 @@ pub enum TokenKind {
     LeftParen,
     RightParen,
     Semicolon,
+    Comma,
     // One-or-single characters
     Equals,
     //Keywords
@@ -40,6 +41,7 @@ static SINGLE_CHAR_TOKENS: phf::Map<char, TokenKind> = phf_map! {
     ')' => RightParen,
     ';' => Semicolon,
     '=' => Equals,
+    ',' => Comma,
 };
 
 static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
