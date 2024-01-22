@@ -1,3 +1,4 @@
+use super::Expr::*;
 use super::Stmt::*;
 use super::*;
 use lexer::TokenKind;
@@ -87,7 +88,7 @@ fn function(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
 
     // TODO: Parse body
 
-    Ok(Expression)
+    Ok(Stmt::Halt)
 }
 
 fn variable(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
@@ -95,9 +96,88 @@ fn variable(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
     let name = expect(queue, Identifier, "Expected variable name.")?;
     expect(queue, Semicolon, "Expected ';' after variable declaration.")?;
 
-    Ok(Variable { name })
+    Ok(Stmt::Variable { name })
 }
 
 fn statement(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
-    Ok(Expression)
+    let stmt: Result<Stmt, CompilationError> = match peek(queue)?.kind {
+        TokenKind::Halt => {
+            next(queue)?;
+            Ok(Stmt::Halt)
+        }
+        _ => expression_statement(queue),
+    };
+
+    stmt
+}
+
+fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
+    let expr = expression(queue)?;
+
+    if peek(queue)?.kind == Equals {
+        let equals = next(queue)?;
+        let value = expression(queue)?;
+        if let Expr::Variable { name } = expr {
+            Ok(Assign {
+                target: name,
+                value,
+            })
+        } else {
+            Err(error(equals.line, "Cannot assign to non-variable."))
+        }
+    } else {
+        expect(queue, Semicolon, "Expected ';' after statement.")?;
+        Ok(Expression { expr })
+    }
+}
+
+fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
+    let token = next(queue)?;
+    let expr = match token.kind {
+        Number => Ok(Literal {
+            value: get_value(token)?,
+        }),
+        Identifier => Ok(Expr::Variable { name: token }),
+        _ => Err(error(
+            token.line,
+            "Expected number or identifier in expression.",
+        )),
+    };
+
+    expr
+}
+
+fn get_value(token: Token) -> Result<u8, CompilationError> {
+    token
+        .value
+        .ok_or(error(token.line, "Expected a value in number literal."))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn token(kind: TokenKind) -> Token {
+        Token {
+            kind,
+            lexeme: String::from(""),
+            value: None,
+            line: 0,
+        }
+    }
+
+    #[test]
+    fn variable_ok() {
+        let mut tokens: VecDeque<_> =
+            vec![token(Unsigned8), token(Identifier), token(Semicolon)].into();
+        let result = variable(&mut tokens).unwrap();
+        assert!(matches!(result, Stmt::Variable { .. }));
+    }
+
+    #[test]
+    fn variable_err() {
+        let mut tokens: VecDeque<_> = vec![token(Unsigned8), token(Identifier)].into();
+        let result = variable(&mut tokens);
+        assert!(matches!(result, Err { .. }));
+    }
 }

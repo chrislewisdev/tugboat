@@ -4,6 +4,7 @@ mod parser;
 use lexer::Token;
 use std::collections::VecDeque;
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum Stmt {
     Function {
         name: Token,
@@ -18,11 +19,19 @@ pub enum Stmt {
         condition: Expr,
         body: Vec<Stmt>,
     },
-    Assign,
-    Expression,
+    Assign {
+        target: Token,
+        value: Expr,
+    },
+    Expression {
+        expr: Expr,
+    },
 }
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum Expr {
-    Literal,
+    Literal { value: u8 },
+    Variable { name: Token },
 }
 
 #[derive(Debug, PartialEq, Eq)]
