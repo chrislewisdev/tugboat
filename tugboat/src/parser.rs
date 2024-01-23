@@ -14,7 +14,7 @@ pub fn parse(tokens: Vec<Token>) -> (Vec<Stmt>, Vec<CompilationError>) {
         if let Ok(stmt) = result {
             statements.push(stmt);
         } else if let Err(err) = result {
-            // Consider what else to do in error case e.g. synchronise here
+            // TODO: Consider what else to do in error case e.g. synchronise here
             errors.push(err);
         }
     }
@@ -86,9 +86,14 @@ fn function(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
     }
     expect(queue, RightParen, "Expected ')' after argument list.")?;
 
-    // TODO: Parse body
+    expect(queue, LeftBrace, "Expected '{' after function declaration.")?;
+    let body = block(queue)?;
 
-    Ok(Stmt::Halt)
+    Ok(Function {
+        name,
+        arguments,
+        body,
+    })
 }
 
 fn variable(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
@@ -103,12 +108,28 @@ fn statement(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
     let stmt: Result<Stmt, CompilationError> = match peek(queue)?.kind {
         TokenKind::Halt => {
             next(queue)?;
+            expect(queue, Semicolon, "Expected ';' after halt.")?;
             Ok(Stmt::Halt)
         }
+        TokenKind::While => while_loop(queue),
         _ => expression_statement(queue),
     };
 
     stmt
+}
+
+fn while_loop(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
+    next(queue)?; // Consume the opening keyword
+    expect(queue, LeftParen, "Expected '(' after while.")?;
+
+    let condition = expression(queue)?;
+
+    expect(queue, RightParen, "Expected ')' after while condition.")?;
+    expect(queue, LeftBrace, "Expected '{' at beginning of while body.")?;
+
+    let body = block(queue)?;
+
+    Ok(Stmt::While { condition, body })
 }
 
 fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
@@ -117,6 +138,7 @@ fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, Compilation
     if peek(queue)?.kind == Equals {
         let equals = next(queue)?;
         let value = expression(queue)?;
+        expect(queue, Semicolon, "Expected ';' after statement.")?;
         if let Expr::Variable { name } = expr {
             Ok(Assign {
                 target: name,
@@ -131,9 +153,24 @@ fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, Compilation
     }
 }
 
+fn block(queue: &mut VecDeque<Token>) -> Result<Vec<Stmt>, CompilationError> {
+    let mut statements: Vec<Stmt> = Vec::new();
+
+    // We expect that the opening '{' has been consumed before calling this
+    while peek(queue)?.kind != RightBrace {
+        statements.push(statement(queue)?);
+    }
+
+    expect(queue, RightBrace, "Expected '}' at end of block.")?;
+
+    Ok(statements)
+}
+
 fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
     let token = next(queue)?;
     let expr = match token.kind {
+        True => Ok(Literal { value: 1 }),
+        False => Ok(Literal { value: 0 }),
         Number => Ok(Literal {
             value: get_value(token)?,
         }),
@@ -179,5 +216,29 @@ mod tests {
         let mut tokens: VecDeque<_> = vec![token(Unsigned8), token(Identifier)].into();
         let result = variable(&mut tokens);
         assert!(matches!(result, Err { .. }));
+    }
+
+    #[test]
+    fn parse_basic() {
+        let (tokens, _) = lexer::lex(String::from(
+            "u8 variable;\nfn main(a, b, c) {\nvariable = 5;\n}\n",
+        ));
+        let (ast, errors) = parse(tokens);
+
+        assert_eq!(errors, vec![]);
+        assert!(matches!(
+            ast[..],
+            [Stmt::Variable { .. }, Stmt::Function { .. }]
+        ));
+        // TODO: Assert that function body/arguments are sane
+    }
+
+    #[test]
+    fn parse_while() {
+        let (tokens, _) = lexer::lex(String::from("while (true) { halt; }"));
+        let (ast, errors) = parse(tokens);
+
+        assert_eq!(errors, vec![]);
+        assert!(matches!(ast[..], [Stmt::While { .. }]));
     }
 }
