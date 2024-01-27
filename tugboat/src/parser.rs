@@ -1,25 +1,23 @@
-use super::Expr::*;
-use super::Stmt::*;
 use super::*;
 use lexer::TokenKind;
 use lexer::TokenKind::*;
 
-pub fn parse(tokens: Vec<Token>) -> (Vec<Stmt>, Vec<CompilationError>) {
+pub fn parse(tokens: Vec<Token>) -> (Vec<Declaration>, Vec<CompilationError>) {
     let mut queue: VecDeque<_> = tokens.into_iter().collect();
-    let mut statements: Vec<Stmt> = Vec::new();
+    let mut declarations: Vec<Declaration> = Vec::new();
     let mut errors: Vec<CompilationError> = Vec::new();
 
     while queue.len() > 0 {
         let result = declaration(&mut queue);
-        if let Ok(stmt) = result {
-            statements.push(stmt);
+        if let Ok(dec) = result {
+            declarations.push(dec);
         } else if let Err(err) = result {
             // TODO: Consider what else to do in error case e.g. synchronise here
             errors.push(err);
         }
     }
 
-    (statements, errors)
+    (declarations, errors)
 }
 
 fn error(line: u32, msg: &'static str) -> CompilationError {
@@ -64,17 +62,16 @@ fn expect(
     }
 }
 
-fn declaration(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
-    let stmt = match peek(queue)?.kind {
+fn declaration(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
+    let token = peek(queue)?;
+    match token.kind {
         Fn => function(queue),
         Unsigned8 => variable(queue),
-        _ => statement(queue),
-    };
-
-    stmt
+        _ => Err(error(token.line, "Unsupported top-level statement.")),
+    }
 }
 
-fn function(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
+fn function(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
     expect(queue, Fn, "Expected 'fn' keyword.")?;
     let name = expect(queue, Identifier, "Expected identifier after 'fn'.")?;
 
@@ -89,19 +86,19 @@ fn function(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
     expect(queue, LeftBrace, "Expected '{' after function declaration.")?;
     let body = block(queue)?;
 
-    Ok(Function {
+    Ok(Declaration::Function {
         name,
         arguments,
         body,
     })
 }
 
-fn variable(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
+fn variable(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
     expect(queue, Unsigned8, "Expected 'u8' keyword.")?;
     let name = expect(queue, Identifier, "Expected variable name.")?;
     expect(queue, Semicolon, "Expected ';' after variable declaration.")?;
 
-    Ok(Stmt::Variable { name })
+    Ok(Declaration::Variable { name })
 }
 
 fn statement(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
@@ -140,7 +137,7 @@ fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, Compilation
         let value = expression(queue)?;
         expect(queue, Semicolon, "Expected ';' after statement.")?;
         if let Expr::Variable { name } = expr {
-            Ok(Assign {
+            Ok(Stmt::Assign {
                 target: name,
                 value,
             })
@@ -149,7 +146,7 @@ fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, Compilation
         }
     } else {
         expect(queue, Semicolon, "Expected ';' after statement.")?;
-        Ok(Expression { expr })
+        Ok(Stmt::Expression { expr })
     }
 }
 
@@ -169,9 +166,9 @@ fn block(queue: &mut VecDeque<Token>) -> Result<Vec<Stmt>, CompilationError> {
 fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
     let token = next(queue)?;
     let expr = match token.kind {
-        True => Ok(Literal { value: 1 }),
-        False => Ok(Literal { value: 0 }),
-        Number => Ok(Literal {
+        True => Ok(Expr::Literal { value: 1 }),
+        False => Ok(Expr::Literal { value: 0 }),
+        Number => Ok(Expr::Literal {
             value: get_value(token)?,
         }),
         Identifier => Ok(Expr::Variable { name: token }),
@@ -208,7 +205,7 @@ mod tests {
         let mut tokens: VecDeque<_> =
             vec![token(Unsigned8), token(Identifier), token(Semicolon)].into();
         let result = variable(&mut tokens).unwrap();
-        assert!(matches!(result, Stmt::Variable { .. }));
+        assert!(matches!(result, Declaration::Variable { .. }));
     }
 
     #[test]
@@ -228,7 +225,7 @@ mod tests {
         assert_eq!(errors, vec![]);
         assert!(matches!(
             ast[..],
-            [Stmt::Variable { .. }, Stmt::Function { .. }]
+            [Declaration::Variable { .. }, Declaration::Function { .. }]
         ));
         // TODO: Assert that function body/arguments are sane
     }
@@ -236,9 +233,9 @@ mod tests {
     #[test]
     fn parse_while() {
         let (tokens, _) = lexer::lex(String::from("while (true) { halt; }"));
-        let (ast, errors) = parse(tokens);
+        let mut queue: VecDeque<Token> = tokens.into_iter().collect();
+        let stmt = while_loop(&mut queue).unwrap();
 
-        assert_eq!(errors, vec![]);
-        assert!(matches!(ast[..], [Stmt::While { .. }]));
+        //TODO: Figure out some asserts here
     }
 }

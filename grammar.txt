@@ -1,6 +1,6 @@
 program         -> declaration* EOF;
 
-declaration     -> funDecl | varDecl | statement;
+declaration     -> funDecl | varDecl;
 
 funDecl         -> "fn" function;
 function        -> IDENTIFIER "(" parameters? ")" block;

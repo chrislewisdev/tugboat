@@ -34,8 +34,15 @@ fn main() {
 }
 
 fn compile(filename: &str, contents: String) {
-    let errors = tugboat::compile(filename, contents);
-    report(errors);
+    let result = tugboat::compile(filename, contents);
+    match result {
+        Ok(asm) => {
+            println!("{}", asm);
+        }
+        Err(errors) => {
+            report(errors);
+        }
+    }
 }
 
 fn report(errors: Vec<CompilationError>) {

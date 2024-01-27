@@ -24,7 +24,7 @@ pub enum TokenKind {
     Number,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Token {
     pub kind: TokenKind,
     pub lexeme: String,
