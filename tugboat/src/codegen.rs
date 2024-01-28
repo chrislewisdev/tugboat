@@ -99,6 +99,7 @@ fn gen_while_loop(condition: &Expr, body: &Vec<Stmt>) -> String {
         output.push_str(gen_statement(stmt).as_str());
     }
 
+    output.push_str(format!("\tjr .startWhile_{}\n", uid).as_str());
     output.push_str(format!(".endWhile_{}\n", uid).as_str());
 
     output
@@ -133,5 +134,6 @@ fn gen_evaluate_literal(value: &u8) -> String {
 }
 
 fn gen_evaluate_variable(name: &Token) -> String {
+    // TODO: Make sure this variable actually exists!!
     format!("\tld a, [{}]\n", name.lexeme)
 }

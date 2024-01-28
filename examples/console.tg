@@ -1,0 +1,28 @@
+// An idea of how a program to draw text to the screen might work.
+// Pretty unrefined right now tbh.
+
+extern u8* tileData;
+u8 tileDataLength = SIZEOF("gen/DistantTears.2bpp");
+u8 counter;
+
+fn print(u8* text) {
+    
+}
+
+fn main() {
+    // Wait for vblank
+    while (hw.rLY < 144) {}
+    _hw_rLY = 0;
+
+    // Load font data
+    // Assume hw.tileData = $9000
+    copy(fontData, tileData, tileDataLength)
+
+    // Zero out screen0
+    zeroMemory(hw.screen0)
+
+    print("Hello World!");
+    while (counter < 5) {
+        printNumber(counter);
+    }
+}
