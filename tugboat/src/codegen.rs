@@ -105,7 +105,6 @@ fn gen_while_loop(condition: &Expr, body: &Vec<Stmt>) -> String {
     output
 }
 
-
 fn gen_assign(target: &Token, value: &Expr) -> String {
     // Evaluate expression into a, then store into memory
     let mut output = gen_evaluate(value);

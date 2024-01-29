@@ -29,7 +29,7 @@ factor          ->  unary ( ( "/" | "*" ) unary )* ;
 unary           ->  ( "!" | "-" ) unary
                     | call ;
 call            ->  primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
-primary         ->  NUMBER | "true" | "false"
-                    | "(" expression ")" | IDENTIFIER ;
+primary         ->  NUMBER | "true" | "false" | CHARACTER
+                    | "(" expression ")" | IDENTIFIER("[" expression "]");
 
 arguments       ->  expression ("," expression)* ;

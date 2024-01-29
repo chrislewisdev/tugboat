@@ -234,7 +234,7 @@ mod tests {
     fn parse_while() {
         let (tokens, _) = lexer::lex(String::from("while (true) { halt; }"));
         let mut queue: VecDeque<Token> = tokens.into_iter().collect();
-        let stmt = while_loop(&mut queue).unwrap();
+        let _stmt = while_loop(&mut queue).unwrap();
 
         //TODO: Figure out some asserts here
     }

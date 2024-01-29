@@ -1,6 +1,25 @@
 // An idea of how a program to draw text to the screen might work.
 // Pretty unrefined right now tbh.
 
+// Ideas for data access...
+// Basic
+u8 myVariable;
+myVariable = 5;
+myVariable = 'a';
+
+// Array
+u8[10] myArray;
+myArray[0] = 5;
+
+// Strings
+string[10] myString;
+myString = "i have a null at the end";
+
+// Hardware access
+u16 bkgMapData = $9000;
+bkgMapData[y + x] = 5;
+
+
 extern u8* tileData;
 u8 tileDataLength = SIZEOF("gen/DistantTears.2bpp");
 u8 counter;

@@ -8,10 +8,22 @@ pub enum TokenKind {
     RightBrace,
     LeftParen,
     RightParen,
+    LeftBracket,
+    RightBracket,
     Semicolon,
     Comma,
-    // One-or-single characters
+    Star,
+    Plus,
+    Minus,
+    Exclamation,
+    // One-or-two characters
+    Slash,
     Equals,
+    EqualsEquals,
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
     //Keywords
     Fn,
     Unsigned8,
@@ -39,9 +51,18 @@ static SINGLE_CHAR_TOKENS: phf::Map<char, TokenKind> = phf_map! {
     '}' => RightBrace,
     '(' => LeftParen,
     ')' => RightParen,
+    '[' => LeftBracket,
+    ']' => RightBracket,
     ';' => Semicolon,
     '=' => Equals,
     ',' => Comma,
+    '*' => Star,
+    '!' => Exclamation,
+    '>' => Greater,
+    '<' => Less,
+    '/' => Slash,
+    '+' => Plus,
+    '-' => Minus,
 };
 
 static KEYWORDS: phf::Map<&'static str, TokenKind> = phf_map! {
@@ -68,9 +89,52 @@ pub fn lex(code: String) -> (Vec<Token>, Vec<CompilationError>) {
 
     while queue.len() > 0 {
         match queue.pop_front() {
+            Some('=') if is_char('=', queue.get(0)) => {
+                queue.pop_front();
+                add(EqualsEquals, String::from("=="), None, line);
+            }
+            Some('>') if is_char('=', queue.get(0)) => {
+                queue.pop_front();
+                add(GreaterEqual, String::from(">="), None, line);
+            }
+            Some('<') if is_char('=', queue.get(0)) => {
+                queue.pop_front();
+                add(LessEqual, String::from("<="), None, line);
+            }
+            Some('/') if is_char('/', queue.get(0)) => {
+                while !is_char('\n', queue.get(0)) {
+                    queue.pop_front();
+                }
+            }
             Some(c) if SINGLE_CHAR_TOKENS.contains_key(&c) => {
                 let kind = SINGLE_CHAR_TOKENS.get(&c).unwrap().clone();
                 add(kind, String::from(c), None, line);
+            }
+            // TODO: Let's break these larger branches off into functions
+            Some('\'') => {
+                let mut literal = String::new();
+                while !is_char('\'', queue.get(0)) {
+                    literal.push(queue.pop_front().unwrap());
+                }
+                queue.pop_front();
+
+                if literal.len() == 1 {
+                    let character_literal = literal.chars().next().unwrap();
+                    let number_literal = u8::try_from(u32::from(character_literal));
+                    if let Ok(n) = number_literal {
+                        add(Number, literal, Some(n), line);
+                    } else {
+                        let msg =
+                            format!("Failed to convert character to u8: '{}'", character_literal);
+                        error(msg, line);
+                    }
+                } else {
+                    let msg = format!(
+                        "Character literal should be exactly one character: '{}'",
+                        literal
+                    );
+                    error(msg, line);
+                }
             }
             Some(c @ '0'..='9') => {
                 let mut literal = String::from(c);
@@ -114,6 +178,13 @@ pub fn lex(code: String) -> (Vec<Token>, Vec<CompilationError>) {
     }
 
     (tokens, errors)
+}
+
+fn is_char(target: char, subject: Option<&char>) -> bool {
+    match subject {
+        Some(c) if *c == target => true,
+        _ => false,
+    }
 }
 
 fn is_digit(c: Option<&char>) -> bool {
@@ -228,5 +299,54 @@ mod tests {
                 1
             )]
         );
+    }
+
+    #[test]
+    fn lex_equals_equals() {
+        let (result, _) = lex(String::from("== = =="));
+        assert_eq!(
+            result,
+            vec![
+                token(EqualsEquals, "==", None, 1),
+                token(Equals, "=", None, 1),
+                token(EqualsEquals, "==", None, 1)
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_comments_and_comparisons() {
+        let (result, _) = lex(String::from("// This is a comment\n> >= < <="));
+        assert_eq!(
+            result,
+            vec![
+                token(Greater, ">", None, 2),
+                token(GreaterEqual, ">=", None, 2),
+                token(Less, "<", None, 2),
+                token(LessEqual, "<=", None, 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_character_literals() {
+        let (result, _) = lex(String::from("'a' '0' 'G'"));
+        assert_eq!(
+            result,
+            vec![
+                token(Number, "a", Some(97), 1),
+                token(Number, "0", Some(48), 1),
+                token(Number, "G", Some(71), 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_character_literal_errors() {
+        let (_, errors) = lex(String::from("'aaa' ''"));
+        assert_eq!(errors, vec![
+            error("Character literal should be exactly one character: 'aaa'", 1),
+            error("Character literal should be exactly one character: ''", 1),
+        ]);
     }
 }
