@@ -1,13 +1,7 @@
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use std::fs;
 use std::path::PathBuf;
 use tugboat::CompilationError;
-
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
-enum Format {
-    Rgbds,
-    Raw,
-}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -15,29 +9,48 @@ struct Args {
     // Files to compile
     #[arg(required = true)]
     file: PathBuf,
-    // Compiled output format
-    #[arg(long)]
-    format: Option<Format>,
+    #[arg(short, long)]
+    output: Option<PathBuf>,
+    #[arg(short, long, default_value_t = false)]
+    verbose: bool,
 }
 
 fn main() {
     let args = Args::parse();
+
+    let output = match args.output {
+        Some(path) => path,
+        None => {
+            let mut renamed = args.file.clone();
+            renamed.set_extension("asm");
+            renamed
+        }
+    };
 
     let file = fs::read_to_string(&args.file);
     match file {
         Err(err) => println!("Unable to open {:?}: {}", args.file, err),
         Ok(contents) => {
             println!("Compiling {:?}", args.file);
-            compile(args.file.file_stem().unwrap().to_str().unwrap(), contents);
+            compile(
+                args.file.file_stem().unwrap().to_str().unwrap(),
+                contents,
+                output,
+                args.verbose,
+            );
         }
     }
 }
 
-fn compile(filename: &str, contents: String) {
+fn compile(filename: &str, contents: String, output: PathBuf, verbose: bool) {
     let result = tugboat::compile(filename, contents);
     match result {
         Ok(asm) => {
-            println!("{}", asm);
+            if verbose {
+                println!("{}", asm);
+            }
+            let _ = fs::write(output, asm);
+            // TODO: Check if write succeeded
         }
         Err(errors) => {
             report(errors);

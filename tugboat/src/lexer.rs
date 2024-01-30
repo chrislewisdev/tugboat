@@ -344,9 +344,15 @@ mod tests {
     #[test]
     fn lex_character_literal_errors() {
         let (_, errors) = lex(String::from("'aaa' ''"));
-        assert_eq!(errors, vec![
-            error("Character literal should be exactly one character: 'aaa'", 1),
-            error("Character literal should be exactly one character: ''", 1),
-        ]);
+        assert_eq!(
+            errors,
+            vec![
+                error(
+                    "Character literal should be exactly one character: 'aaa'",
+                    1
+                ),
+                error("Character literal should be exactly one character: ''", 1),
+            ]
+        );
     }
 }
