@@ -31,7 +31,6 @@ fn main() {
     match file {
         Err(err) => println!("Unable to open {:?}: {}", args.file, err),
         Ok(contents) => {
-            println!("Compiling {:?}", args.file);
             compile(
                 args.file.file_stem().unwrap().to_str().unwrap(),
                 contents,

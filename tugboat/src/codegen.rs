@@ -5,10 +5,11 @@ pub fn gen(ast: Vec<Declaration>) -> Result<String, Vec<CompilationError>> {
     // let mut errors: Vec<CompilationError> = Vec::new();
 
     // Define all variables in memory first
-    output.push_str(String::from("SECTION \"Variables\", WRAM\n").as_str());
+    output.push_str(String::from("SECTION \"Variables\", WRAM0\n").as_str());
     for dec in ast.iter().filter(is_variable) {
         output.push_str(gen_declaration(dec).as_str())
     }
+    
 
     // Now output all functions
     output.push_str(String::from("SECTION \"Functions\", ROM0\n").as_str());
@@ -66,7 +67,7 @@ fn gen_variable(name: &Token) -> String {
 }
 
 fn gen_function(name: &Token, _arguments: &Vec<Token>, body: &Vec<Stmt>) -> String {
-    let mut output = format!("{}:\n", name.lexeme);
+    let mut output = format!("{}::\n", name.lexeme);
 
     for stmt in body {
         output.push_str(gen_statement(stmt).as_str());
@@ -93,7 +94,7 @@ fn gen_while_loop(condition: &Expr, body: &Vec<Stmt>) -> String {
     // Check the loop condition
     output.push_str(gen_evaluate(condition).as_str());
     output.push_str("\tor a\n");
-    output.push_str(format!("\tjr nz, .endWhile_{}\n", uid).as_str());
+    output.push_str(format!("\tjr z, .endWhile_{}\n", uid).as_str());
 
     for stmt in body {
         output.push_str(gen_statement(stmt).as_str());
