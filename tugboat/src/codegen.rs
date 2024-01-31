@@ -1,23 +1,37 @@
+use self::analysis::ValueType;
 use super::*;
+use std::collections::HashMap;
 
-pub fn gen(ast: Vec<Declaration>) -> Result<String, Vec<CompilationError>> {
+pub fn gen(
+    ast: Vec<Declaration>,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, Vec<CompilationError>> {
     let mut output = String::new();
-    // let mut errors: Vec<CompilationError> = Vec::new();
+    let mut errors: Vec<CompilationError> = Vec::new();
 
     // Define all variables in memory first
     output.push_str(String::from("SECTION \"Variables\", WRAM0\n").as_str());
     for dec in ast.iter().filter(is_variable) {
-        output.push_str(gen_declaration(dec).as_str())
+        match gen_declaration(dec, directory) {
+            Ok(asm) => output.push_str(asm.as_str()),
+            Err(err) => errors.push(err),
+        }
     }
-    
 
     // Now output all functions
     output.push_str(String::from("SECTION \"Functions\", ROM0\n").as_str());
     for dec in ast.iter().filter(is_function) {
-        output.push_str(gen_declaration(dec).as_str())
+        match gen_declaration(dec, directory) {
+            Ok(asm) => output.push_str(asm.as_str()),
+            Err(err) => errors.push(err),
+        }
     }
 
-    Ok(output)
+    if errors.len() == 0 {
+        Ok(output)
+    } else {
+        Err(errors)
+    }
 }
 
 static mut UID: u32 = 0;
@@ -44,21 +58,24 @@ fn is_function(dec: &&Declaration) -> bool {
     }
 }
 
-fn _error(line: u32, msg: &str) -> CompilationError {
+fn error(line: u32, msg: &str) -> CompilationError {
     CompilationError {
         line,
         msg: msg.to_string(),
     }
 }
 
-fn gen_declaration(dec: &Declaration) -> String {
+fn gen_declaration(
+    dec: &Declaration,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, CompilationError> {
     match dec {
-        Declaration::Variable { name } => gen_variable(name),
+        Declaration::Variable { name } => Ok(gen_variable(name)),
         Declaration::Function {
             name,
             arguments,
             body,
-        } => gen_function(name, arguments, body),
+        } => gen_function(name, arguments, body, directory),
     }
 }
 
@@ -66,66 +83,93 @@ fn gen_variable(name: &Token) -> String {
     format!("{}:: db\n", name.lexeme)
 }
 
-fn gen_function(name: &Token, _arguments: &Vec<Token>, body: &Vec<Stmt>) -> String {
+fn gen_function(
+    name: &Token,
+    _arguments: &Vec<Token>,
+    body: &Vec<Stmt>,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, CompilationError> {
     let mut output = format!("{}::\n", name.lexeme);
 
     for stmt in body {
-        output.push_str(gen_statement(stmt).as_str());
+        output.push_str(gen_statement(stmt, directory)?.as_str());
     }
-
     output.push_str("\tret\n");
 
-    output
+    Ok(output)
 }
 
-fn gen_statement(stmt: &Stmt) -> String {
+fn gen_statement(
+    stmt: &Stmt,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, CompilationError> {
     match stmt {
-        Stmt::While { condition, body } => gen_while_loop(condition, body),
-        Stmt::Assign { target, value } => gen_assign(target, value),
-        Stmt::Expression { expr } => gen_expression(expr),
-        Stmt::Halt => gen_halt(),
+        Stmt::While { condition, body } => gen_while_loop(condition, body, directory),
+        Stmt::Assign { target, value } => gen_assign(target, value, directory),
+        Stmt::Expression { expr } => gen_expression(expr, directory),
+        Stmt::Halt => Ok(gen_halt()),
     }
 }
 
-fn gen_while_loop(condition: &Expr, body: &Vec<Stmt>) -> String {
+fn gen_while_loop(
+    condition: &Expr,
+    body: &Vec<Stmt>,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, CompilationError> {
     let uid = get_uid();
     let mut output = format!(".startWhile_{}\n", uid);
 
     // Check the loop condition
-    output.push_str(gen_evaluate(condition).as_str());
+    output.push_str(gen_evaluate(condition, directory)?.as_str());
     output.push_str("\tor a\n");
     output.push_str(format!("\tjr z, .endWhile_{}\n", uid).as_str());
 
     for stmt in body {
-        output.push_str(gen_statement(stmt).as_str());
+        output.push_str(gen_statement(stmt, directory)?.as_str());
     }
 
     output.push_str(format!("\tjr .startWhile_{}\n", uid).as_str());
     output.push_str(format!(".endWhile_{}\n", uid).as_str());
 
-    output
+    Ok(output)
 }
 
-fn gen_assign(target: &Token, value: &Expr) -> String {
+fn gen_assign(
+    target: &Token,
+    value: &Expr,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, CompilationError> {
+    // Ensure variable exists
+    let _ = directory.get(&target.lexeme).ok_or(error(
+        target.line,
+        format!("Undefined variable: {}", target.lexeme).as_str(),
+    ))?;
+
     // Evaluate expression into a, then store into memory
-    let mut output = gen_evaluate(value);
+    let mut output = gen_evaluate(value, directory)?;
     output.push_str(format!("\tld [{}], a\n", target.lexeme).as_str());
 
-    output
+    Ok(output)
 }
 
-fn gen_expression(expr: &Expr) -> String {
-    gen_evaluate(expr)
+fn gen_expression(
+    expr: &Expr,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, CompilationError> {
+    gen_evaluate(expr, directory)
 }
 
 fn gen_halt() -> String {
     String::from("\thalt\n")
 }
 
-fn gen_evaluate(expr: &Expr) -> String {
+fn gen_evaluate(
+    expr: &Expr,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, CompilationError> {
     match expr {
-        Expr::Literal { value } => gen_evaluate_literal(value),
-        Expr::Variable { name } => gen_evaluate_variable(name),
+        Expr::Literal { value } => Ok(gen_evaluate_literal(value)),
+        Expr::Variable { name } => gen_evaluate_variable(name, directory),
     }
 }
 
@@ -133,7 +177,16 @@ fn gen_evaluate_literal(value: &u8) -> String {
     format!("\tld a, {}\n", value)
 }
 
-fn gen_evaluate_variable(name: &Token) -> String {
-    // TODO: Make sure this variable actually exists!!
-    format!("\tld a, [{}]\n", name.lexeme)
+fn gen_evaluate_variable(
+    name: &Token,
+    directory: &HashMap<String, ValueType>,
+) -> Result<String, CompilationError> {
+    let _ = directory.get(&name.lexeme).ok_or(error(
+        name.line,
+        format!("Undefined variable: {}", name.lexeme).as_str(),
+    ))?;
+
+    // TODO: Check type of value here, e.g. can't load a function...
+
+    Ok(format!("\tld a, [{}]\n", name.lexeme))
 }

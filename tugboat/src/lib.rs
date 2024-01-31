@@ -1,6 +1,7 @@
 mod codegen;
 mod lexer;
 mod parser;
+mod analysis;
 
 use lexer::Token;
 use std::collections::VecDeque;
@@ -48,7 +49,7 @@ pub fn compile(_name: &str, contents: String) -> Result<String, Vec<CompilationE
         return Err(errors);
     }
 
-    // *Probably* going to need some more steps here.
+    let directory = analysis::generate_directory(&ast);
 
-    Ok(codegen::gen(ast)?)
+    Ok(codegen::gen(ast, &directory)?)
 }
