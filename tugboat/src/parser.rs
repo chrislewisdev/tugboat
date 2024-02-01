@@ -27,7 +27,7 @@ fn error(line: u32, msg: &'static str) -> CompilationError {
     }
 }
 
-fn peek(queue: &mut VecDeque<Token>) -> Result<&Token, CompilationError> {
+fn peek(queue: &VecDeque<Token>) -> Result<&Token, CompilationError> {
     queue
         .get(0)
         .ok_or(error(0, "Expected a token in the parse queue."))
@@ -63,7 +63,7 @@ fn expect(
 }
 
 fn declaration(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
-    let token = peek(queue)?;
+    let token = next(queue)?;
     match token.kind {
         Fn => function(queue),
         Unsigned8 => variable(queue),
@@ -72,7 +72,6 @@ fn declaration(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationEr
 }
 
 fn function(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
-    expect(queue, Fn, "Expected 'fn' keyword.")?;
     let name = expect(queue, Identifier, "Expected identifier after 'fn'.")?;
 
     let mut arguments: Vec<Token> = Vec::new();
@@ -94,7 +93,6 @@ fn function(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError
 }
 
 fn variable(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
-    expect(queue, Unsigned8, "Expected 'u8' keyword.")?;
     let name = expect(queue, Identifier, "Expected variable name.")?;
     expect(queue, Semicolon, "Expected ';' after variable declaration.")?;
 
@@ -202,8 +200,7 @@ mod tests {
 
     #[test]
     fn variable_ok() {
-        let mut tokens: VecDeque<_> =
-            vec![token(Unsigned8), token(Identifier), token(Semicolon)].into();
+        let mut tokens: VecDeque<_> = vec![token(Identifier), token(Semicolon)].into();
         let result = variable(&mut tokens).unwrap();
         assert!(matches!(result, Declaration::Variable { .. }));
     }
@@ -237,16 +234,5 @@ mod tests {
         let _stmt = while_loop(&mut queue).unwrap();
 
         //TODO: Figure out some asserts here
-    }
-
-    #[test]
-    fn parse_literal_assignment() {
-        let (tokens, _) = lexer::lex(String::from(
-            "fn main() { 1 = 5; }",
-        ));
-        println!("{:?}", tokens);
-        // TODO: This loops infinitely because we don't 'synchronise' when the parser errors :(
-        //let (_, errors) = parse(tokens);
-        //assert_eq!(errors, vec![]);
     }
 }

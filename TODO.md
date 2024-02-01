@@ -1,8 +1,8 @@
 In no particular order, things I need to add support for or consider:
 
 - Expressions - arithmetic, logical, bitwise
+- 'Synchronise' logic when parsing errors occur
 - if statements, for loops, break/continue
-- Validate variable references
 - Type system - pointers, arrays, function pointers(?)
 - extern references
 - asm blocks
