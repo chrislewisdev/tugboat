@@ -65,6 +65,17 @@ fn error(line: u32, msg: &str) -> CompilationError {
     }
 }
 
+fn lookup<'a>(
+    identifier: &String,
+    directory: &'a HashMap<String, ValueType>,
+    line: u32,
+) -> Result<&'a ValueType, CompilationError> {
+    directory.get(identifier).ok_or(error(
+        line,
+        format!("Undefined variable: {}", identifier).as_str(),
+    ))
+}
+
 fn gen_declaration(
     dec: &Declaration,
     directory: &HashMap<String, ValueType>,
@@ -139,11 +150,12 @@ fn gen_assign(
     value: &Expr,
     directory: &HashMap<String, ValueType>,
 ) -> Result<String, CompilationError> {
-    // Ensure variable exists
-    let _ = directory.get(&target.lexeme).ok_or(error(
-        target.line,
-        format!("Undefined variable: {}", target.lexeme).as_str(),
-    ))?;
+    let def = lookup(&target.lexeme, directory, target.line)?;
+
+    // Can't assign to functions...
+    if *def == ValueType::Function {
+        return Err(error(target.line, "Cannot assign to function"));
+    }
 
     // Evaluate expression into a, then store into memory
     let mut output = gen_evaluate(value, directory)?;
@@ -181,12 +193,10 @@ fn gen_evaluate_variable(
     name: &Token,
     directory: &HashMap<String, ValueType>,
 ) -> Result<String, CompilationError> {
-    let _ = directory.get(&name.lexeme).ok_or(error(
-        name.line,
-        format!("Undefined variable: {}", name.lexeme).as_str(),
-    ))?;
+    let _ = lookup(&name.lexeme, directory, name.line)?;
 
-    // TODO: Check type of value here, e.g. can't load a function...
+    // Is it allowed to load the value of a function here? Maybe for function pointers...
+    // (which will require support for 16-bit loads too)
 
     Ok(format!("\tld a, [{}]\n", name.lexeme))
 }

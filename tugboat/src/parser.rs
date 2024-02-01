@@ -238,4 +238,15 @@ mod tests {
 
         //TODO: Figure out some asserts here
     }
+
+    #[test]
+    fn parse_literal_assignment() {
+        let (tokens, _) = lexer::lex(String::from(
+            "fn main() { 1 = 5; }",
+        ));
+        println!("{:?}", tokens);
+        // TODO: This loops infinitely because we don't 'synchronise' when the parser errors :(
+        //let (_, errors) = parse(tokens);
+        //assert_eq!(errors, vec![]);
+    }
 }

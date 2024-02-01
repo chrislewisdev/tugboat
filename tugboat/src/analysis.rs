@@ -2,6 +2,7 @@ use super::*;
 use std::collections::HashMap;
 
 // When I introduce a type system, this might need to live elsewhere...
+#[derive(PartialEq, Eq)]
 pub enum ValueType {
     UnsignedByte,
     Function,

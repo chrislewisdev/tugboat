@@ -1,7 +1,7 @@
+mod analysis;
 mod codegen;
 mod lexer;
 mod parser;
-mod analysis;
 
 use lexer::Token;
 use std::collections::VecDeque;
@@ -38,7 +38,7 @@ pub struct CompilationError {
     pub line: u32,
 }
 
-pub fn compile(_name: &str, contents: String) -> Result<String, Vec<CompilationError>> {
+pub fn compile(contents: String) -> Result<String, Vec<CompilationError>> {
     let mut errors: Vec<CompilationError> = Vec::new();
     let (tokens, lexer_errors) = lexer::lex(contents);
     let (ast, parser_errors) = parser::parse(tokens);
@@ -52,4 +52,37 @@ pub fn compile(_name: &str, contents: String) -> Result<String, Vec<CompilationE
     let directory = analysis::generate_directory(&ast);
 
     Ok(codegen::gen(ast, &directory)?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn error(msg: &str, line: u32) -> CompilationError {
+        CompilationError {
+            msg: msg.to_string(),
+            line,
+        }
+    }
+
+    #[test]
+    fn error_assign_to_function() {
+        let src = String::from("fn myFunction(){} fn main() { myFunction = 5; }");
+        let errors = compile(src).expect_err("Expected compilation errors from bad script!");
+        assert_eq!(errors, vec![error("Cannot assign to function", 1)]);
+    }
+
+    #[test]
+    fn error_undefined_variable() {
+        let src = String::from("fn main() { myVariable = 5; }");
+        let errors = compile(src).expect_err("Expected compilation errors from bad script!");
+        assert_eq!(errors, vec![error("Undefined variable: myVariable", 1)]);
+    }
+
+    //#[test]
+    //fn error_assign_to_literal() {
+        //let src = String::from("fn main() { 1 = 5; }");
+        //let errors = compile(src).expect_err("Expected compilation errors from bad script!");
+        //assert_eq!(errors, vec![]);
+    //}
 }

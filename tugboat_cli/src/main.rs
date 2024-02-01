@@ -6,7 +6,6 @@ use tugboat::CompilationError;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    // Files to compile
     #[arg(required = true)]
     file: PathBuf,
     #[arg(short, long)]
@@ -31,18 +30,13 @@ fn main() {
     match file {
         Err(err) => println!("Unable to open {:?}: {}", args.file, err),
         Ok(contents) => {
-            compile(
-                args.file.file_stem().unwrap().to_str().unwrap(),
-                contents,
-                output,
-                args.verbose,
-            );
+            compile(contents, output, args.verbose);
         }
     }
 }
 
-fn compile(filename: &str, contents: String, output: PathBuf, verbose: bool) {
-    let result = tugboat::compile(filename, contents);
+fn compile(contents: String, output: PathBuf, verbose: bool) {
+    let result = tugboat::compile(contents);
     match result {
         Ok(asm) => {
             if verbose {

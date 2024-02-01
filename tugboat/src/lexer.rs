@@ -88,7 +88,8 @@ pub fn lex(code: String) -> (Vec<Token>, Vec<CompilationError>) {
     };
 
     while queue.len() > 0 {
-        match queue.pop_front() {
+        let next_char = queue.pop_front();
+        match next_char {
             Some('=') if is_char('=', queue.get(0)) => {
                 queue.pop_front();
                 add(EqualsEquals, String::from("=="), None, line);
