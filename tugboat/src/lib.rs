@@ -23,7 +23,7 @@ pub enum Declaration {
 pub enum Stmt {
     Halt,
     While { condition: Expr, body: Vec<Stmt> },
-    Assign { target: Token, value: Expr },
+    Assign { target: Expr, value: Expr },
     Expression { expr: Expr },
 }
 
@@ -85,12 +85,6 @@ mod tests {
     fn error_assign_to_literal() {
         let src = String::from("fn main() { 1 = 5; }");
         let errors = compile(src).expect_err("Expected compilation errors from bad script!");
-        assert_eq!(
-            errors,
-            vec![
-                error("Cannot assign to non-variable.", 1),
-                error("Unsupported top-level statement.", 1)
-            ]
-        );
+        assert_eq!(errors, vec![error("Cannot assign to non-variable.", 0),]);
     }
 }

@@ -95,7 +95,11 @@ fn function(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError
 fn variable(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
     let mut size = 1;
     if peek(queue)?.kind == LeftBracket {
-        expect(queue, LeftBracket, "Expected '[' beginning array definition.")?;
+        expect(
+            queue,
+            LeftBracket,
+            "Expected '[' beginning array definition.",
+        )?;
         let size_token = expect(queue, Number, "Expected array size specifier.")?;
         expect(queue, RightBracket, "Expected ']' ending array definition.")?;
 
@@ -140,17 +144,13 @@ fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, Compilation
     let expr = expression(queue)?;
 
     if peek(queue)?.kind == Equals {
-        let equals = next(queue)?;
+        let _equals = next(queue)?;
         let value = expression(queue)?;
         expect(queue, Semicolon, "Expected ';' after statement.")?;
-        if let Expr::Variable { name } = expr {
-            Ok(Stmt::Assign {
-                target: name,
-                value,
-            })
-        } else {
-            Err(error(equals.line, "Cannot assign to non-variable."))
-        }
+        Ok(Stmt::Assign {
+            target: expr,
+            value,
+        })
     } else {
         expect(queue, Semicolon, "Expected ';' after statement.")?;
         Ok(Stmt::Expression { expr })
@@ -180,10 +180,17 @@ fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
         }),
         Identifier => {
             if peek(queue)?.kind == LeftBracket {
-                expect(queue, LeftBracket, "Expected '[' beginning index expression.")?;
+                expect(
+                    queue,
+                    LeftBracket,
+                    "Expected '[' beginning index expression.",
+                )?;
                 let index = expression(queue)?;
                 expect(queue, RightBracket, "Expected ']' ending index expression.")?;
-                Ok(Expr::Indexed { name: token, index: Box::new(index) })
+                Ok(Expr::Indexed {
+                    name: token,
+                    index: Box::new(index),
+                })
             } else {
                 Ok(Expr::Variable { name: token })
             }
@@ -232,7 +239,13 @@ mod tests {
 
     #[test]
     fn expression_indexed() {
-        let mut tokens: VecDeque<_> = vec![token(Identifier), token(LeftBracket), token(Identifier), token(RightBracket)].into();
+        let mut tokens: VecDeque<_> = vec![
+            token(Identifier),
+            token(LeftBracket),
+            token(Identifier),
+            token(RightBracket),
+        ]
+        .into();
         let result = expression(&mut tokens).unwrap();
         assert!(matches!(result, Expr::Indexed { .. }))
     }
