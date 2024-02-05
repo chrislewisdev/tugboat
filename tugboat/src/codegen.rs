@@ -81,7 +81,7 @@ fn gen_declaration(
     directory: &HashMap<String, ValueType>,
 ) -> Result<String, CompilationError> {
     match dec {
-        Declaration::Variable { name } => Ok(gen_variable(name)),
+        Declaration::Variable { name, size } => Ok(gen_variable(name, size)),
         Declaration::Function {
             name,
             arguments,
@@ -90,8 +90,8 @@ fn gen_declaration(
     }
 }
 
-fn gen_variable(name: &Token) -> String {
-    format!("{}:: db\n", name.lexeme)
+fn gen_variable(name: &Token, size: &u8) -> String {
+    format!("{}:: ds {}\n", name.lexeme, size)
 }
 
 fn gen_function(
@@ -182,6 +182,7 @@ fn gen_evaluate(
     match expr {
         Expr::Literal { value } => Ok(gen_evaluate_literal(value)),
         Expr::Variable { name } => gen_evaluate_variable(name, directory),
+        Expr::Indexed { name, index } => gen_evaluate_indexed(name, index, directory),
     }
 }
 
@@ -199,4 +200,23 @@ fn gen_evaluate_variable(
     // (which will require support for 16-bit loads too)
 
     Ok(format!("\tld a, [{}]\n", name.lexeme))
+}
+
+fn gen_evaluate_indexed(name: &Token, index: &Box<Expr>, directory: &HashMap<String, ValueType>) -> Result<String, CompilationError> {
+    let def = lookup(&name.lexeme, directory, name.line)?;
+
+    // Cannot index function pointer
+    if *def == ValueType::Function {
+        return Err(error(name.line, "Cannot index a function identifier"));
+    }
+
+    // This assumes that the expression will evaluate to an 8-bit value
+    // meaning we can only access up to elements 255 of an array.
+    // This will definitely need rethinking!
+    let mut output = gen_evaluate(index, directory)?;
+    output.push_str("\tld b, 0\n\tld c, a\n");
+    output.push_str(format!("\tld hl, {}\n", name.lexeme).as_str());
+    output.push_str("\tadd hl, bc\n\tld a, [hl]\n");
+
+    Ok(output)
 }

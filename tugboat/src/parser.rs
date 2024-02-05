@@ -93,10 +93,19 @@ fn function(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError
 }
 
 fn variable(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
+    let mut size = 1;
+    if peek(queue)?.kind == LeftBracket {
+        expect(queue, LeftBracket, "Expected '[' beginning array definition.")?;
+        let size_token = expect(queue, Number, "Expected array size specifier.")?;
+        expect(queue, RightBracket, "Expected ']' ending array definition.")?;
+
+        size = get_value(size_token)?;
+    }
+
     let name = expect(queue, Identifier, "Expected variable name.")?;
     expect(queue, Semicolon, "Expected ';' after variable declaration.")?;
 
-    Ok(Declaration::Variable { name })
+    Ok(Declaration::Variable { name, size })
 }
 
 fn statement(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
@@ -169,7 +178,16 @@ fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
         Number => Ok(Expr::Literal {
             value: get_value(token)?,
         }),
-        Identifier => Ok(Expr::Variable { name: token }),
+        Identifier => {
+            if peek(queue)?.kind == LeftBracket {
+                expect(queue, LeftBracket, "Expected '[' beginning index expression.")?;
+                let index = expression(queue)?;
+                expect(queue, RightBracket, "Expected ']' ending index expression.")?;
+                Ok(Expr::Indexed { name: token, index: Box::new(index) })
+            } else {
+                Ok(Expr::Variable { name: token })
+            }
+        }
         _ => Err(error(
             token.line,
             "Expected number or identifier in expression.",
@@ -210,6 +228,13 @@ mod tests {
         let mut tokens: VecDeque<_> = vec![token(Unsigned8), token(Identifier)].into();
         let result = variable(&mut tokens);
         assert!(matches!(result, Err { .. }));
+    }
+
+    #[test]
+    fn expression_indexed() {
+        let mut tokens: VecDeque<_> = vec![token(Identifier), token(LeftBracket), token(Identifier), token(RightBracket)].into();
+        let result = expression(&mut tokens).unwrap();
+        assert!(matches!(result, Expr::Indexed { .. }))
     }
 
     #[test]

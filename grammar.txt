@@ -5,7 +5,7 @@ declaration     -> funDecl | varDecl;
 funDecl         -> "fn" function;
 function        -> IDENTIFIER "(" parameters? ")" block;
 parameters      -> IDENTIFIER ( "," IDENTIFIER )*;
-varDecl         -> "u8" IDENTIFIER ("=" expression)? ";";
+varDecl         -> "u8" ("[" NUMBER "]") IDENTIFIER ("=" expression)? ";";
 
 statement       ->  haltStmt | assignStmt | exprStmt | forStmt | ifStmt | returnStmt | whileStmt | block;
 haltStmt        ->  "halt" ";" ;

@@ -16,7 +16,7 @@ pub fn generate_directory(ast: &Vec<Declaration>) -> HashMap<String, ValueType> 
             Declaration::Function { name, .. } => {
                 directory.insert(name.lexeme.clone(), ValueType::Function);
             }
-            Declaration::Variable { name } => {
+            Declaration::Variable { name, .. } => {
                 directory.insert(name.lexeme.clone(), ValueType::UnsignedByte);
             }
         }

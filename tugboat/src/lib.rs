@@ -10,6 +10,7 @@ use std::collections::VecDeque;
 pub enum Declaration {
     Variable {
         name: Token,
+        size: u8,
     },
     Function {
         name: Token,
@@ -30,6 +31,7 @@ pub enum Stmt {
 pub enum Expr {
     Literal { value: u8 },
     Variable { name: Token },
+    Indexed { name: Token, index: Box<Expr> },
 }
 
 #[derive(Debug, PartialEq, Eq)]
