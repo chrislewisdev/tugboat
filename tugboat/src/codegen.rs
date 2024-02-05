@@ -3,7 +3,7 @@ use super::*;
 use std::collections::HashMap;
 
 type Directory = HashMap<String, ValueType>;
-type Generated = Result<String, CompilationError>;
+type GenResult = Result<String, CompilationError>;
 
 pub fn gen(ast: Vec<Declaration>, directory: &Directory) -> Result<String, Vec<CompilationError>> {
     let mut output = String::new();
@@ -76,7 +76,7 @@ fn lookup<'a>(
     ))
 }
 
-fn gen_declaration(dec: &Declaration, directory: &Directory) -> Generated {
+fn gen_declaration(dec: &Declaration, directory: &Directory) -> GenResult {
     match dec {
         Declaration::Variable { name, size } => Ok(gen_variable(name, size)),
         Declaration::Function {
@@ -96,7 +96,7 @@ fn gen_function(
     _arguments: &Vec<Token>,
     body: &Vec<Stmt>,
     directory: &Directory,
-) -> Generated {
+) -> GenResult {
     let mut output = format!("{}::\n", name.lexeme);
 
     for stmt in body {
@@ -107,7 +107,7 @@ fn gen_function(
     Ok(output)
 }
 
-fn gen_statement(stmt: &Stmt, directory: &Directory) -> Generated {
+fn gen_statement(stmt: &Stmt, directory: &Directory) -> GenResult {
     match stmt {
         Stmt::While { condition, body } => gen_while_loop(condition, body, directory),
         Stmt::Assign { target, value } => gen_assign(target, value, directory),
@@ -116,7 +116,7 @@ fn gen_statement(stmt: &Stmt, directory: &Directory) -> Generated {
     }
 }
 
-fn gen_while_loop(condition: &Expr, body: &Vec<Stmt>, directory: &Directory) -> Generated {
+fn gen_while_loop(condition: &Expr, body: &Vec<Stmt>, directory: &Directory) -> GenResult {
     let uid = get_uid();
     let mut output = format!(".startWhile_{}\n", uid);
 
@@ -135,7 +135,7 @@ fn gen_while_loop(condition: &Expr, body: &Vec<Stmt>, directory: &Directory) -> 
     Ok(output)
 }
 
-fn gen_assign(target: &Expr, value: &Expr, directory: &Directory) -> Generated {
+fn gen_assign(target: &Expr, value: &Expr, directory: &Directory) -> GenResult {
     match target {
         Expr::Variable { name } => gen_assign_variable(name, value, directory),
         Expr::Indexed { name, index } => gen_assign_indexed(name, index, value, directory),
@@ -146,7 +146,7 @@ fn gen_assign(target: &Expr, value: &Expr, directory: &Directory) -> Generated {
     }
 }
 
-fn gen_assign_variable(target: &Token, value: &Expr, directory: &Directory) -> Generated {
+fn gen_assign_variable(target: &Token, value: &Expr, directory: &Directory) -> GenResult {
     let def = lookup(&target.lexeme, directory, target.line)?;
 
     // Can't assign to functions...
@@ -166,7 +166,7 @@ fn gen_assign_indexed(
     index: &Box<Expr>,
     value: &Expr,
     directory: &Directory,
-) -> Generated {
+) -> GenResult {
     // Load indexed pointer into hl, evaluate new value into a, then set.
     let mut output = gen_indexed(name, index, directory)?;
     output.push_str(gen_evaluate(value, directory)?.as_str());
@@ -175,7 +175,7 @@ fn gen_assign_indexed(
     Ok(output)
 }
 
-fn gen_expression(expr: &Expr, directory: &Directory) -> Generated {
+fn gen_expression(expr: &Expr, directory: &Directory) -> GenResult {
     gen_evaluate(expr, directory)
 }
 
@@ -183,7 +183,7 @@ fn gen_halt() -> String {
     String::from("\thalt\n")
 }
 
-fn gen_evaluate(expr: &Expr, directory: &Directory) -> Generated {
+fn gen_evaluate(expr: &Expr, directory: &Directory) -> GenResult {
     match expr {
         Expr::Literal { value } => Ok(gen_evaluate_literal(value)),
         Expr::Variable { name } => gen_evaluate_variable(name, directory),
@@ -195,7 +195,7 @@ fn gen_evaluate_literal(value: &u8) -> String {
     format!("\tld a, {}\n", value)
 }
 
-fn gen_evaluate_variable(name: &Token, directory: &Directory) -> Generated {
+fn gen_evaluate_variable(name: &Token, directory: &Directory) -> GenResult {
     let _ = lookup(&name.lexeme, directory, name.line)?;
 
     // Is it allowed to load the value of a function here? Maybe for function pointers...
@@ -204,13 +204,13 @@ fn gen_evaluate_variable(name: &Token, directory: &Directory) -> Generated {
     Ok(format!("\tld a, [{}]\n", name.lexeme))
 }
 
-fn gen_evaluate_indexed(name: &Token, index: &Box<Expr>, directory: &Directory) -> Generated {
+fn gen_evaluate_indexed(name: &Token, index: &Box<Expr>, directory: &Directory) -> GenResult {
     let mut output = gen_indexed(name, index, directory)?;
     output.push_str("\tld a, [hl]\n");
     Ok(output)
 }
 
-fn gen_indexed(name: &Token, index: &Box<Expr>, directory: &Directory) -> Generated {
+fn gen_indexed(name: &Token, index: &Box<Expr>, directory: &Directory) -> GenResult {
     let def = lookup(&name.lexeme, directory, name.line)?;
 
     // Cannot index function pointer
