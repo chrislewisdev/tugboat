@@ -29,7 +29,7 @@ pub enum Stmt {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expr {
-    Literal { value: u8 },
+    Literal { token: Token, value: u8 },
     Variable { name: Token },
     Indexed { name: Token, index: Box<Expr> },
 }
@@ -85,6 +85,6 @@ mod tests {
     fn error_assign_to_literal() {
         let src = String::from("fn main() { 1 = 5; }");
         let errors = compile(src).expect_err("Expected compilation errors from bad script!");
-        assert_eq!(errors, vec![error("Cannot assign to non-variable.", 0),]);
+        assert_eq!(errors, vec![error("Cannot assign to non-variable.", 1),]);
     }
 }

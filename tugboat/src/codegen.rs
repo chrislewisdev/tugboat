@@ -139,10 +139,7 @@ fn gen_assign(target: &Expr, value: &Expr, directory: &Directory) -> GenResult {
     match target {
         Expr::Variable { name } => gen_assign_variable(name, value, directory),
         Expr::Indexed { name, index } => gen_assign_indexed(name, index, value, directory),
-        // TODO: Pls store a token in a literal so we can report line number :(
-        // It would also be nice to have a common token for all expressions
-        // so that all upcoming expression types can be handled in one _ => clause...
-        Expr::Literal { .. } => Err(error(0, "Cannot assign to non-variable.")),
+        Expr::Literal { token, .. } => Err(error(token.line, "Cannot assign to non-variable.")),
     }
 }
 
@@ -185,7 +182,7 @@ fn gen_halt() -> String {
 
 fn gen_evaluate(expr: &Expr, directory: &Directory) -> GenResult {
     match expr {
-        Expr::Literal { value } => Ok(gen_evaluate_literal(value)),
+        Expr::Literal { value, .. } => Ok(gen_evaluate_literal(value)),
         Expr::Variable { name } => gen_evaluate_variable(name, directory),
         Expr::Indexed { name, index } => gen_evaluate_indexed(name, index, directory),
     }

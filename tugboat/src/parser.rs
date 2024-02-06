@@ -103,7 +103,7 @@ fn variable(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError
         let size_token = expect(queue, Number, "Expected array size specifier.")?;
         expect(queue, RightBracket, "Expected ']' ending array definition.")?;
 
-        size = get_value(size_token)?;
+        size = get_value(&size_token)?;
     }
 
     let name = expect(queue, Identifier, "Expected variable name.")?;
@@ -173,10 +173,11 @@ fn block(queue: &mut VecDeque<Token>) -> Result<Vec<Stmt>, CompilationError> {
 fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
     let token = next(queue)?;
     let expr = match token.kind {
-        True => Ok(Expr::Literal { value: 1 }),
-        False => Ok(Expr::Literal { value: 0 }),
+        True => Ok(Expr::Literal { token, value: 1 }),
+        False => Ok(Expr::Literal { token, value: 0 }),
         Number => Ok(Expr::Literal {
-            value: get_value(token)?,
+            value: get_value(&token)?,
+            token,
         }),
         Identifier => {
             if peek(queue)?.kind == LeftBracket {
@@ -204,7 +205,7 @@ fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
     expr
 }
 
-fn get_value(token: Token) -> Result<u8, CompilationError> {
+fn get_value(token: &Token) -> Result<u8, CompilationError> {
     token
         .value
         .ok_or(error(token.line, "Expected a value in number literal."))
