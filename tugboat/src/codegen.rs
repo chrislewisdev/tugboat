@@ -65,25 +65,16 @@ fn error(line: u32, msg: &str) -> CompilationError {
     }
 }
 
-fn lookup<'a>(
-    identifier: &String,
-    directory: &'a Directory,
-    line: u32,
-) -> Result<&'a ValueType, CompilationError> {
-    directory.get(identifier).ok_or(error(
-        line,
-        format!("Undefined variable: {}", identifier).as_str(),
-    ))
+fn lookup<'a>(identifier: &String, directory: &'a Directory, line: u32) -> Result<&'a ValueType, CompilationError> {
+    directory
+        .get(identifier)
+        .ok_or(error(line, format!("Undefined variable: {}", identifier).as_str()))
 }
 
 fn gen_declaration(dec: &Declaration, directory: &Directory) -> GenResult {
     match dec {
         Declaration::Variable { name, size } => Ok(gen_variable(name, size)),
-        Declaration::Function {
-            name,
-            arguments,
-            body,
-        } => gen_function(name, arguments, body, directory),
+        Declaration::Function { name, arguments, body } => gen_function(name, arguments, body, directory),
     }
 }
 
@@ -91,12 +82,7 @@ fn gen_variable(name: &Token, size: &u8) -> String {
     format!("{}:: ds {}\n", name.lexeme, size)
 }
 
-fn gen_function(
-    name: &Token,
-    _arguments: &Vec<Token>,
-    body: &Vec<Stmt>,
-    directory: &Directory,
-) -> GenResult {
+fn gen_function(name: &Token, _arguments: &Vec<Token>, body: &Vec<Stmt>, directory: &Directory) -> GenResult {
     let mut output = format!("{}::\n", name.lexeme);
 
     for stmt in body {
@@ -158,12 +144,7 @@ fn gen_assign_variable(target: &Token, value: &Expr, directory: &Directory) -> G
     Ok(output)
 }
 
-fn gen_assign_indexed(
-    name: &Token,
-    index: &Box<Expr>,
-    value: &Expr,
-    directory: &Directory,
-) -> GenResult {
+fn gen_assign_indexed(name: &Token, index: &Box<Expr>, value: &Expr, directory: &Directory) -> GenResult {
     // Load indexed pointer into hl, evaluate new value into a, then set.
     let mut output = gen_indexed(name, index, directory)?;
     output.push_str(gen_evaluate(value, directory)?.as_str());

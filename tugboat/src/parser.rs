@@ -28,9 +28,7 @@ fn error(line: u32, msg: &'static str) -> CompilationError {
 }
 
 fn peek(queue: &VecDeque<Token>) -> Result<&Token, CompilationError> {
-    queue
-        .get(0)
-        .ok_or(error(0, "Expected a token in the parse queue."))
+    queue.get(0).ok_or(error(0, "Expected a token in the parse queue."))
 }
 
 fn next(queue: &mut VecDeque<Token>) -> Result<Token, CompilationError> {
@@ -48,11 +46,7 @@ fn next_if(queue: &mut VecDeque<Token>, kind: TokenKind) -> Result<bool, Compila
     }
 }
 
-fn expect(
-    queue: &mut VecDeque<Token>,
-    kind: TokenKind,
-    msg: &'static str,
-) -> Result<Token, CompilationError> {
+fn expect(queue: &mut VecDeque<Token>, kind: TokenKind, msg: &'static str) -> Result<Token, CompilationError> {
     let token = next(queue)?;
 
     if token.kind == kind {
@@ -85,21 +79,13 @@ fn function(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError
     expect(queue, LeftBrace, "Expected '{' after function declaration.")?;
     let body = block(queue)?;
 
-    Ok(Declaration::Function {
-        name,
-        arguments,
-        body,
-    })
+    Ok(Declaration::Function { name, arguments, body })
 }
 
 fn variable(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
     let mut size = 1;
     if peek(queue)?.kind == LeftBracket {
-        expect(
-            queue,
-            LeftBracket,
-            "Expected '[' beginning array definition.",
-        )?;
+        expect(queue, LeftBracket, "Expected '[' beginning array definition.")?;
         let size_token = expect(queue, Number, "Expected array size specifier.")?;
         expect(queue, RightBracket, "Expected ']' ending array definition.")?;
 
@@ -147,10 +133,7 @@ fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, Compilation
         let _equals = next(queue)?;
         let value = expression(queue)?;
         expect(queue, Semicolon, "Expected ';' after statement.")?;
-        Ok(Stmt::Assign {
-            target: expr,
-            value,
-        })
+        Ok(Stmt::Assign { target: expr, value })
     } else {
         expect(queue, Semicolon, "Expected ';' after statement.")?;
         Ok(Stmt::Expression { expr })
@@ -181,11 +164,7 @@ fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
         }),
         Identifier => {
             if peek(queue)?.kind == LeftBracket {
-                expect(
-                    queue,
-                    LeftBracket,
-                    "Expected '[' beginning index expression.",
-                )?;
+                expect(queue, LeftBracket, "Expected '[' beginning index expression.")?;
                 let index = expression(queue)?;
                 expect(queue, RightBracket, "Expected ']' ending index expression.")?;
                 Ok(Expr::Indexed {
@@ -196,10 +175,7 @@ fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
                 Ok(Expr::Variable { name: token })
             }
         }
-        _ => Err(error(
-            token.line,
-            "Expected number or identifier in expression.",
-        )),
+        _ => Err(error(token.line, "Expected number or identifier in expression.")),
     };
 
     expr
@@ -253,9 +229,7 @@ mod tests {
 
     #[test]
     fn parse_basic() {
-        let (tokens, _) = lexer::lex(String::from(
-            "u8 variable;\nfn main(a, b, c) {\nvariable = 5;\n}\n",
-        ));
+        let (tokens, _) = lexer::lex(String::from("u8 variable;\nfn main(a, b, c) {\nvariable = 5;\n}\n"));
         let (ast, errors) = parse(tokens);
 
         assert_eq!(errors, vec![]);

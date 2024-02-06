@@ -125,15 +125,11 @@ pub fn lex(code: String) -> (Vec<Token>, Vec<CompilationError>) {
                     if let Ok(n) = number_literal {
                         add(Number, literal, Some(n), line);
                     } else {
-                        let msg =
-                            format!("Failed to convert character to u8: '{}'", character_literal);
+                        let msg = format!("Failed to convert character to u8: '{}'", character_literal);
                         error(msg, line);
                     }
                 } else {
-                    let msg = format!(
-                        "Character literal should be exactly one character: '{}'",
-                        literal
-                    );
+                    let msg = format!("Character literal should be exactly one character: '{}'", literal);
                     error(msg, line);
                 }
             }
@@ -247,10 +243,7 @@ mod tests {
     #[test]
     fn lex_keywords() {
         let (result, _) = lex(String::from("fn u8"));
-        assert_eq!(
-            result,
-            vec![token(Fn, "fn", None, 1), token(Unsigned8, "u8", None, 1),]
-        );
+        assert_eq!(result, vec![token(Fn, "fn", None, 1), token(Unsigned8, "u8", None, 1),]);
     }
 
     #[test]
@@ -267,9 +260,7 @@ mod tests {
 
     #[test]
     fn lex_basic_script() {
-        let (result, _) = lex(String::from(
-            "u8 variable;\nfn main() {\nvariable = 5;\n}\n",
-        ));
+        let (result, _) = lex(String::from("u8 variable;\nfn main() {\nvariable = 5;\n}\n"));
         assert_eq!(
             result,
             vec![
@@ -348,10 +339,7 @@ mod tests {
         assert_eq!(
             errors,
             vec![
-                error(
-                    "Character literal should be exactly one character: 'aaa'",
-                    1
-                ),
+                error("Character literal should be exactly one character: 'aaa'", 1),
                 error("Character literal should be exactly one character: ''", 1),
             ]
         );
