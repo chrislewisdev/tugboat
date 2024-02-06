@@ -42,8 +42,10 @@ fn compile(contents: String, output: PathBuf, verbose: bool) {
             if verbose {
                 println!("{}", asm);
             }
-            let _ = fs::write(output, asm);
-            // TODO: Check if write succeeded
+            let write_result = fs::write(output.clone(), asm);
+            if let Err(error) = write_result {
+                println!("Failed to write {:?}: {}", output, error);
+            }
         }
         Err(errors) => {
             report(errors);

@@ -37,7 +37,7 @@ fn next(queue: &mut VecDeque<Token>) -> Result<Token, CompilationError> {
         .ok_or(error(0, "Expected a token in the parse queue."))
 }
 
-fn next_if(queue: &mut VecDeque<Token>, kind: TokenKind) -> Result<bool, CompilationError> {
+fn _next_if(queue: &mut VecDeque<Token>, kind: TokenKind) -> Result<bool, CompilationError> {
     if peek(queue)?.kind == kind {
         next(queue)?;
         Ok(true)
@@ -68,12 +68,15 @@ fn declaration(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationEr
 fn function(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
     let name = expect(queue, Identifier, "Expected identifier after 'fn'.")?;
 
-    let mut arguments: Vec<Token> = Vec::new();
+    let arguments: Vec<Token> = Vec::new();
     expect(queue, LeftParen, "Expected '(' after function name.")?;
-    while peek(queue)?.kind != RightParen {
-        arguments.push(expect(queue, Identifier, "Expected parameter name.")?);
-        next_if(queue, Comma)?;
-    }
+
+    // Currently unsure what function parameter syntax will be.
+    // while peek(queue)?.kind != RightParen {
+    //     arguments.push(expect(queue, Identifier, "Expected parameter name.")?);
+    //     next_if(queue, Comma)?;
+    // }
+
     expect(queue, RightParen, "Expected ')' after argument list.")?;
 
     expect(queue, LeftBrace, "Expected '{' after function declaration.")?;
@@ -229,7 +232,7 @@ mod tests {
 
     #[test]
     fn parse_basic() {
-        let (tokens, _) = lexer::lex(String::from("u8 variable;\nfn main(a, b, c) {\nvariable = 5;\n}\n"));
+        let (tokens, _) = lexer::lex(String::from("u8 variable;\nfn main() {\nvariable = 5;\n}\n"));
         let (ast, errors) = parse(tokens);
 
         assert_eq!(errors, vec![]);
@@ -237,15 +240,31 @@ mod tests {
             ast[..],
             [Declaration::Variable { .. }, Declaration::Function { .. }]
         ));
-        // TODO: Assert that function body/arguments are sane
     }
 
     #[test]
     fn parse_while() {
         let (tokens, _) = lexer::lex(String::from("while (true) { halt; }"));
         let mut queue: VecDeque<Token> = tokens.into_iter().collect();
-        let _stmt = while_loop(&mut queue).unwrap();
+        let stmt = while_loop(&mut queue).unwrap();
 
-        //TODO: Figure out some asserts here
+        let Stmt::While { condition, body } = stmt else {
+            panic!("Expected while statement")
+        };
+        assert!(matches!(condition, Expr::Literal { value: 1, .. }));
+        assert!(matches!(body[..], [Stmt::Halt]));
+    }
+
+    #[test]
+    fn parse_array_definition() {
+        let (tokens, _) = lexer::lex(String::from("u8[100] array;"));
+        let (ast, errors) = parse(tokens);
+
+        assert_eq!(errors, vec![]);
+        let Declaration::Variable { name, size } = ast.get(0).unwrap() else {
+            panic!("Expected variable definition.");
+        };
+        assert_eq!(name.lexeme, "array");
+        assert_eq!(*size, 100);
     }
 }
