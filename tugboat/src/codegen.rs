@@ -1,3 +1,5 @@
+use crate::lexer::TokenKind;
+
 use self::analysis::ValueType;
 use super::*;
 use std::collections::HashMap;
@@ -126,6 +128,7 @@ fn gen_assign(target: &Expr, value: &Expr, directory: &Directory) -> GenResult {
         Expr::Variable { name } => gen_assign_variable(name, value, directory),
         Expr::Indexed { name, index } => gen_assign_indexed(name, index, value, directory),
         Expr::Literal { token, .. } => Err(error(token.line, "Cannot assign to non-variable.")),
+        Expr::Binary { operator, .. } => Err(error(operator.line, "Cannot assign to non-variable.")),
     }
 }
 
@@ -166,6 +169,7 @@ fn gen_evaluate(expr: &Expr, directory: &Directory) -> GenResult {
         Expr::Literal { value, .. } => Ok(gen_evaluate_literal(value)),
         Expr::Variable { name } => gen_evaluate_variable(name, directory),
         Expr::Indexed { name, index } => gen_evaluate_indexed(name, index, directory),
+        Expr::Binary { operator, left, right } => gen_evaluate_binary(operator, left, right, directory),
     }
 }
 
@@ -185,6 +189,26 @@ fn gen_evaluate_variable(name: &Token, directory: &Directory) -> GenResult {
 fn gen_evaluate_indexed(name: &Token, index: &Box<Expr>, directory: &Directory) -> GenResult {
     let mut output = gen_indexed(name, index, directory)?;
     output.push_str("\tld a, [hl]\n");
+    Ok(output)
+}
+
+fn gen_evaluate_binary(operator: &Token, left: &Box<Expr>, right: &Box<Expr>, directory: &Directory) -> GenResult {
+    // Evaluate left into a, store in c.
+    let mut output = gen_evaluate(left, directory)?;
+    output.push_str("\tld c, a\n");
+
+    // Evaluate right into a, store in b, get left back into a.
+    output.push_str(gen_evaluate(right, directory)?.as_str());
+    output.push_str("\tld b, a\n");
+    output.push_str("\tld a, c\n");
+
+    let op = match operator.kind {
+        TokenKind::Plus => "\tadd a, b\n",
+        TokenKind::Minus => "\tsub a, b\n",
+        _ => return Err(error(operator.line, "Unexpected operator in binary expression."))
+    };
+    output.push_str(op);
+
     Ok(output)
 }
 

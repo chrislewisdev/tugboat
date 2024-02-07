@@ -34,6 +34,7 @@ pub enum TokenKind {
     // Multi-character
     Identifier,
     Number,
+    EOF,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -174,6 +175,8 @@ pub fn lex(code: String) -> (Vec<Token>, Vec<CompilationError>) {
         }
     }
 
+    add(EOF, String::new(), None, line);
+
     (tokens, errors)
 }
 
@@ -236,6 +239,7 @@ mod tests {
                 token(LeftParen, "(", None, 1),
                 token(RightParen, ")", None, 1),
                 token(Semicolon, ";", None, 1),
+                token(EOF, "", None, 1),
             ]
         );
     }
@@ -243,7 +247,14 @@ mod tests {
     #[test]
     fn lex_keywords() {
         let (result, _) = lex(String::from("fn u8"));
-        assert_eq!(result, vec![token(Fn, "fn", None, 1), token(Unsigned8, "u8", None, 1),]);
+        assert_eq!(
+            result,
+            vec![
+                token(Fn, "fn", None, 1),
+                token(Unsigned8, "u8", None, 1),
+                token(EOF, "", None, 1)
+            ]
+        );
     }
 
     #[test]
@@ -253,7 +264,8 @@ mod tests {
             result,
             vec![
                 token(Identifier, "myVar", None, 1),
-                token(Identifier, "something", None, 1)
+                token(Identifier, "something", None, 1),
+                token(EOF, "", None, 1),
             ]
         );
     }
@@ -276,7 +288,8 @@ mod tests {
                 token(Equals, "=", None, 3),
                 token(Number, "5", Some(5), 3),
                 token(Semicolon, ";", None, 3),
-                token(RightBrace, "}", None, 4)
+                token(RightBrace, "}", None, 4),
+                token(EOF, "", None, 5),
             ]
         );
     }
@@ -301,7 +314,8 @@ mod tests {
             vec![
                 token(EqualsEquals, "==", None, 1),
                 token(Equals, "=", None, 1),
-                token(EqualsEquals, "==", None, 1)
+                token(EqualsEquals, "==", None, 1),
+                token(EOF, "", None, 1),
             ]
         );
     }
@@ -316,6 +330,7 @@ mod tests {
                 token(GreaterEqual, ">=", None, 2),
                 token(Less, "<", None, 2),
                 token(LessEqual, "<=", None, 2),
+                token(EOF, "", None, 2),
             ]
         );
     }
@@ -329,6 +344,7 @@ mod tests {
                 token(Number, "a", Some(97), 1),
                 token(Number, "0", Some(48), 1),
                 token(Number, "G", Some(71), 1),
+                token(EOF, "", None, 1),
             ]
         );
     }

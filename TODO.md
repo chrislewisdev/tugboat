@@ -1,7 +1,6 @@
 In no particular order, things I need to add support for or consider:
 
 - Expressions - arithmetic, logical, bitwise
-- Array access/assignment/definition
 - 'Synchronise' logic when parsing errors occur
 - if statements, for loops, break/continue
 - Type system - pointers, 16-bit values, function pointers(?)

@@ -7,7 +7,7 @@ pub fn parse(tokens: Vec<Token>) -> (Vec<Declaration>, Vec<CompilationError>) {
     let mut declarations: Vec<Declaration> = Vec::new();
     let mut errors: Vec<CompilationError> = Vec::new();
 
-    while queue.len() > 0 {
+    while queue.len() > 0 && !is_end(&queue) {
         let result = declaration(&mut queue);
         if let Ok(dec) = result {
             declarations.push(dec);
@@ -25,6 +25,10 @@ fn error(line: u32, msg: &'static str) -> CompilationError {
         line,
         msg: msg.to_string(),
     }
+}
+
+fn is_end(queue: &VecDeque<Token>) -> bool {
+    queue.get(0).is_some_and(|t| t.kind == EOF)
 }
 
 fn peek(queue: &VecDeque<Token>) -> Result<&Token, CompilationError> {
@@ -157,6 +161,29 @@ fn block(queue: &mut VecDeque<Token>) -> Result<Vec<Stmt>, CompilationError> {
 }
 
 fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
+    term(queue)
+}
+
+fn term(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
+    let mut expr = primary(queue)?;
+
+    while match peek(queue)?.kind {
+        Plus | Minus => true,
+        _ => false,
+    } {
+        let operator = next(queue)?;
+        let right = primary(queue)?;
+        expr = Expr::Binary {
+            left: Box::new(expr),
+            operator,
+            right: Box::new(right),
+        }
+    }
+
+    Ok(expr)
+}
+
+fn primary(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
     let token = next(queue)?;
     let expr = match token.kind {
         True => Ok(Expr::Literal { token, value: 1 }),
@@ -224,6 +251,7 @@ mod tests {
             token(LeftBracket),
             token(Identifier),
             token(RightBracket),
+            token(EOF),
         ]
         .into();
         let result = expression(&mut tokens).unwrap();
@@ -266,5 +294,46 @@ mod tests {
         };
         assert_eq!(name.lexeme, "array");
         assert_eq!(*size, 100);
+    }
+
+    #[test]
+    fn parse_addition_subtraction() {
+        let (tokens, _) = lexer::lex(String::from("1 + 2 + 3 - 5"));
+        let mut queue: VecDeque<_> = tokens.into();
+        let expr = expression(&mut queue).unwrap();
+
+        // Check the top-level expression
+        let Expr::Binary {
+            operator: first_operator,
+            left: first_left,
+            right: first_right,
+        } = expr
+        else {
+            panic!("Expected binary expression.");
+        };
+        assert_eq!(first_operator.kind, Minus);
+        assert!(matches!(*first_left, Expr::Binary { .. }));
+        assert!(matches!(*first_right, Expr::Literal { value: 5, .. }));
+
+        // Check second level
+        let Expr::Binary {
+            operator: second_operator,
+            left: second_left,
+            right: second_right,
+        } = *first_left
+        else {
+            panic!("Expected binary expression.");
+        };
+        assert_eq!(second_operator.kind, Plus);
+        assert!(matches!(*second_left, Expr::Binary { .. }));
+        assert!(matches!(*second_right, Expr::Literal { value: 3, .. }));
+
+        // Check bottom level
+        let Expr::Binary { operator: third_operator, left: third_left, right: third_right } = *second_left else {
+            panic!("Expected binary expression.");
+        };
+        assert_eq!(third_operator.kind, Plus);
+        assert!(matches!(*third_left, Expr::Literal { value: 1, .. }));
+        assert!(matches!(*third_right, Expr::Literal { value: 2, .. }));
     }
 }

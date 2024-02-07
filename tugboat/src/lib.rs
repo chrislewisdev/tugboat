@@ -29,9 +29,22 @@ pub enum Stmt {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Expr {
-    Literal { token: Token, value: u8 },
-    Variable { name: Token },
-    Indexed { name: Token, index: Box<Expr> },
+    Literal {
+        token: Token,
+        value: u8,
+    },
+    Variable {
+        name: Token,
+    },
+    Indexed {
+        name: Token,
+        index: Box<Expr>,
+    },
+    Binary {
+        operator: Token,
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq)]
