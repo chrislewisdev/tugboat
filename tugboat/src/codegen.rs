@@ -11,6 +11,8 @@ pub fn gen(ast: Vec<Declaration>, directory: &Directory) -> Result<String, Vec<C
     let mut output = String::new();
     let mut errors: Vec<CompilationError> = Vec::new();
 
+    output.push_str(include_str!("core.asm"));
+
     // Define all variables in memory first
     output.push_str(String::from("SECTION \"Variables\", WRAM0\n").as_str());
     for dec in ast.iter().filter(is_variable) {
