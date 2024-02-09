@@ -207,7 +207,7 @@ fn gen_evaluate_binary(operator: &Token, left: &Box<Expr>, right: &Box<Expr>, di
     let op = match operator.kind {
         TokenKind::Plus => "\tadd a, b\n",
         TokenKind::Minus => "\tsub a, b\n",
-        _ => return Err(error(operator.line, "Unexpected operator in binary expression."))
+        _ => return Err(error(operator.line, "Unexpected operator in binary expression.")),
     };
     output.push_str(op);
 

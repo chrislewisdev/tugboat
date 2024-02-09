@@ -60,6 +60,15 @@ fn expect(queue: &mut VecDeque<Token>, kind: TokenKind, msg: &'static str) -> Re
     }
 }
 
+fn discard_line(queue: &mut VecDeque<Token>) {
+    while !is_end(queue)
+        && match queue.pop_front().unwrap().kind {
+            Semicolon => false,
+            _ => true,
+        }
+    {}
+}
+
 fn declaration(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError> {
     let token = next(queue)?;
     match token.kind {
@@ -106,7 +115,7 @@ fn variable(queue: &mut VecDeque<Token>) -> Result<Declaration, CompilationError
 }
 
 fn statement(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
-    let stmt: Result<Stmt, CompilationError> = match peek(queue)?.kind {
+    let stmt = match peek(queue)?.kind {
         TokenKind::Halt => {
             next(queue)?;
             expect(queue, Semicolon, "Expected ';' after halt.")?;
@@ -115,6 +124,10 @@ fn statement(queue: &mut VecDeque<Token>) -> Result<Stmt, CompilationError> {
         TokenKind::While => while_loop(queue),
         _ => expression_statement(queue),
     };
+
+    if stmt.is_err() {
+        discard_line(queue);
+    }
 
     stmt
 }
@@ -139,10 +152,18 @@ fn expression_statement(queue: &mut VecDeque<Token>) -> Result<Stmt, Compilation
     if peek(queue)?.kind == Equals {
         let _equals = next(queue)?;
         let value = expression(queue)?;
-        expect(queue, Semicolon, "Expected ';' after statement.")?;
+        expect(
+            queue,
+            Semicolon,
+            "Expected ';' after expression (nested expressions not supported).",
+        )?;
         Ok(Stmt::Assign { target: expr, value })
     } else {
-        expect(queue, Semicolon, "Expected ';' after statement.")?;
+        expect(
+            queue,
+            Semicolon,
+            "Expected ';' after expression (nested expressions not supported).",
+        )?;
         Ok(Stmt::Expression { expr })
     }
 }
@@ -167,7 +188,7 @@ fn expression(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
 fn term(queue: &mut VecDeque<Token>) -> Result<Expr, CompilationError> {
     let mut expr = primary(queue)?;
 
-    while match peek(queue)?.kind {
+    if match peek(queue)?.kind {
         Plus | Minus => true,
         _ => false,
     } {
@@ -298,7 +319,7 @@ mod tests {
 
     #[test]
     fn parse_addition_subtraction() {
-        let (tokens, _) = lexer::lex(String::from("1 + 2 + 3 - 5"));
+        let (tokens, _) = lexer::lex(String::from("1 + 2"));
         let mut queue: VecDeque<_> = tokens.into();
         let expr = expression(&mut queue).unwrap();
 
@@ -311,29 +332,8 @@ mod tests {
         else {
             panic!("Expected binary expression.");
         };
-        assert_eq!(first_operator.kind, Minus);
-        assert!(matches!(*first_left, Expr::Binary { .. }));
-        assert!(matches!(*first_right, Expr::Literal { value: 5, .. }));
-
-        // Check second level
-        let Expr::Binary {
-            operator: second_operator,
-            left: second_left,
-            right: second_right,
-        } = *first_left
-        else {
-            panic!("Expected binary expression.");
-        };
-        assert_eq!(second_operator.kind, Plus);
-        assert!(matches!(*second_left, Expr::Binary { .. }));
-        assert!(matches!(*second_right, Expr::Literal { value: 3, .. }));
-
-        // Check bottom level
-        let Expr::Binary { operator: third_operator, left: third_left, right: third_right } = *second_left else {
-            panic!("Expected binary expression.");
-        };
-        assert_eq!(third_operator.kind, Plus);
-        assert!(matches!(*third_left, Expr::Literal { value: 1, .. }));
-        assert!(matches!(*third_right, Expr::Literal { value: 2, .. }));
+        assert_eq!(first_operator.kind, Plus);
+        assert!(matches!(*first_left, Expr::Literal { value: 1, .. }));
+        assert!(matches!(*first_right, Expr::Literal { value: 2, .. }));
     }
 }

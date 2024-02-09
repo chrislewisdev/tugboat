@@ -100,4 +100,17 @@ mod tests {
         let errors = compile(src).expect_err("Expected compilation errors from bad script!");
         assert_eq!(errors, vec![error("Cannot assign to non-variable.", 1),]);
     }
+
+    #[test]
+    fn error_no_nested_expressions() {
+        let src = String::from("u8 variable; fn main() { variable = 1 + 2 + 3; }");
+        let errors = compile(src).expect_err("Expected compilation errors from bad script!");
+        assert_eq!(
+            errors,
+            vec![
+                error("Expected ';' after expression (nested expressions not supported).", 1),
+                error("Unsupported top-level statement.", 1)
+            ]
+        );
+    }
 }
