@@ -195,14 +195,16 @@ fn gen_evaluate_indexed(name: &Token, index: &Box<Expr>, directory: &Directory) 
 }
 
 fn gen_evaluate_binary(operator: &Token, left: &Box<Expr>, right: &Box<Expr>, directory: &Directory) -> GenResult {
+    // Until we figure out how to juggle registers, binary expressions cannot be nested.
+
     // Evaluate left into a, store in c.
     let mut output = gen_evaluate(left, directory)?;
-    output.push_str("\tld c, a\n");
+    output.push_str("\tld d, a\n");
 
     // Evaluate right into a, store in b, get left back into a.
     output.push_str(gen_evaluate(right, directory)?.as_str());
     output.push_str("\tld b, a\n");
-    output.push_str("\tld a, c\n");
+    output.push_str("\tld a, d\n");
 
     let op = match operator.kind {
         TokenKind::Plus => "\tadd a, b\n",
